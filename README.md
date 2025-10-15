@@ -27,7 +27,7 @@
 ### 1. 克隆或下载项目
 
 ```bash
-cd write
+cd zfcdy
 ```
 
 ### 2. 安装 Python 依赖
