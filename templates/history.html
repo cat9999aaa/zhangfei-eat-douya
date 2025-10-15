@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}历史记录 - AI 文章生成器{% endblock %}
+
+{% block content %}
+<div class="history-page">
+    <h1>历史记录</h1>
+
+    <div class="history-controls">
+        <button id="refreshHistory" class="btn btn-primary">刷新</button>
+        <button id="clearHistory" class="btn btn-secondary">清空历史</button>
+    </div>
+
+    <div id="historyList" class="history-list">
+        <p class="loading-text">加载中...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='history.js') }}"></script>
+{% endblock %}

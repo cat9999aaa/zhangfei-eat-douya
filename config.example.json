@@ -1,0 +1,28 @@
+{
+  "gemini_api_key": "YOUR_GEMINI_API_KEY",
+  "gemini_base_url": "https://generativelanguage.googleapis.com",
+  "unsplash_access_key": "YOUR_UNSPLASH_ACCESS_KEY",
+  "pexels_api_key": "YOUR_PEXELS_API_KEY",
+  "pixabay_api_key": "YOUR_PIXABAY_API_KEY",
+  "default_model": "gemini-pro",
+  "default_prompt": "",
+  "max_concurrent_tasks": 3,
+  "pandoc_path": "",
+  "image_source_priority": ["unsplash", "pexels", "pixabay", "local", "user_uploaded"],
+  "local_image_directories": [
+    {
+      "path": "pic",
+      "tags": ["default", "general"]
+    },
+    {
+      "path": "images/nature",
+      "tags": ["nature", "landscape"]
+    },
+    {
+      "path": "images/tech",
+      "tags": ["technology", "business"]
+    }
+  ],
+  "enable_user_upload": true,
+  "uploaded_images_dir": "uploads"
+}

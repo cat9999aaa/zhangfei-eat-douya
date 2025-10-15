@@ -1,0 +1,309 @@
+{% extends "layout.html" %}
+
+{% block title %}写作 - AI 文章生成器{% endblock %}
+
+{% block content %}
+<div class="write-page">
+    <h1>文章生成</h1>
+
+    <div class="form-section">
+        <div class="form-group">
+            <label>文章标题/主题:</label>
+            <p class="help-text">最多可输入 50 个标题，系统将为每个标题生成独立的文章</p>
+            <div id="topicsContainer"></div>
+            <button id="addTopicBtn" class="btn btn-secondary btn-small">+ 添加标题</button>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="enableImage" checked>
+                生成文章配图（无图片时会显示"请自行配图！！"）
+            </label>
+        </div>
+
+        <div class="button-group">
+            <button id="generateBtn" class="btn btn-primary btn-large">开始生成</button>
+            <button id="clearBtn" class="btn btn-secondary">清空所有</button>
+        </div>
+
+        <!-- 进度显示 -->
+        <div id="progressArea" class="progress-area" style="display: none;">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <p id="progressText" class="progress-text">准备中...</p>
+        </div>
+
+        <!-- 结果显示 -->
+        <div id="resultsArea" class="results-area" style="display: none;">
+            <h3>生成结果</h3>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 图片设置弹窗 -->
+<div id="imageModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>设置文章配图</h2>
+            <span class="modal-close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p class="modal-topic">主题：<span id="modalTopicName"></span></p>
+
+            <div class="image-source-tabs">
+                <button class="tab-btn active" data-tab="upload">上传图片</button>
+                <button class="tab-btn" data-tab="clipboard">粘贴图片</button>
+                <button class="tab-btn" data-tab="url">图片URL</button>
+            </div>
+
+            <!-- 上传图片 -->
+            <div id="uploadTab" class="tab-content active">
+                <div class="upload-area">
+                    <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/bmp" style="display: none;">
+                    <button id="selectFileBtn" class="btn btn-primary">选择文件</button>
+                    <p class="help-text">支持 PNG, JPG, GIF, WEBP, BMP 格式</p>
+                    <div id="uploadPreview" class="image-preview" style="display: none;">
+                        <img id="uploadPreviewImg" src="" alt="预览">
+                        <p id="uploadFileName"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 粘贴图片 -->
+            <div id="clipboardTab" class="tab-content">
+                <div class="clipboard-area">
+                    <div id="pasteZone" class="paste-zone">
+                        <p>点击此区域，然后按 Ctrl+V 粘贴图片</p>
+                        <p class="help-text">从截图工具或其他应用复制图片后粘贴</p>
+                    </div>
+                    <div id="clipboardPreview" class="image-preview" style="display: none;">
+                        <img id="clipboardPreviewImg" src="" alt="预览">
+                        <p>已粘贴图片</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- URL图片 -->
+            <div id="urlTab" class="tab-content">
+                <div class="url-area">
+                    <label>图片URL:</label>
+                    <input type="text" id="imageUrlInput" placeholder="https://example.com/image.jpg" class="url-input">
+                    <button id="loadUrlBtn" class="btn btn-secondary">加载预览</button>
+                    <div id="urlPreview" class="image-preview" style="display: none;">
+                        <img id="urlPreviewImg" src="" alt="预览">
+                        <p id="urlStatus"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-status" id="modalStatus" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+            <button id="saveImageBtn" class="btn btn-primary">保存设置</button>
+            <button id="clearImageBtn" class="btn btn-secondary">清除图片</button>
+            <button id="cancelImageBtn" class="btn btn-secondary">取消</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* 模态框样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.modal-close {
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-topic {
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.modal-topic span {
+    color: #007bff;
+}
+
+.image-source-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab-btn.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+}
+
+.tab-content {
+    display: none;
+    min-height: 200px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.upload-area, .clipboard-area, .url-area {
+    text-align: center;
+}
+
+.paste-zone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 40px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.paste-zone:hover, .paste-zone:focus {
+    border-color: #007bff;
+    background: #f0f8ff;
+}
+
+.paste-zone.active {
+    border-color: #28a745;
+    background: #f0fff4;
+}
+
+.url-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.image-preview {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.modal-status.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.modal-status.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.image-set-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.image-set-btn:hover {
+    background: #218838;
+}
+
+.image-set-btn.has-image {
+    background: #007bff;
+}
+
+.image-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #28a745;
+    border-radius: 50%;
+    margin-left: 5px;
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='write.js') }}"></script>
+{% endblock %}

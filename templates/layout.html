@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}张飞吃豆芽{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">张飞吃豆芽</h1>
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">写作</a></li>
+                <li><a href="/config" class="nav-link">配置</a></li>
+                <li><a href="/history" class="nav-link">历史</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <p><a href="https://dashen.wang/zhangfei" target="_blank">dashen.wang</a></p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

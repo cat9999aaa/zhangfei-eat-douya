@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 文章生成器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI 文章生成器</h1>
+            <p class="subtitle">基于 Google Gemini 的智能文章创作工具</p>
+        </header>
+
+        <div class="main-content">
+            <!-- 配置区域 -->
+            <div class="config-section">
+                <h2>配置设置</h2>
+                <button id="toggleConfig" class="btn btn-secondary">显示/隐藏配置</button>
+
+                <div id="configPanel" class="config-panel" style="display: none;">
+                    <div class="form-group">
+                        <label for="geminiApiKey">Gemini API Key:</label>
+                        <input type="password" id="geminiApiKey" placeholder="请输入您的 Gemini API Key">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="geminiBaseUrl">Gemini Base URL:</label>
+                        <input type="text" id="geminiBaseUrl" value="https://generativelanguage.googleapis.com" placeholder="默认 Base URL">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="unsplashKey">Unsplash Access Key (可选):</label>
+                        <input type="password" id="unsplashKey" placeholder="用于下载配图">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modelSelect">选择模型:</label>
+                        <select id="modelSelect">
+                            <option value="gemini-pro">gemini-pro</option>
+                        </select>
+                        <button id="refreshModels" class="btn btn-small">刷新模型列表</button>
+                    </div>
+
+                    <button id="saveConfig" class="btn btn-primary">保存配置</button>
+                </div>
+            </div>
+
+            <!-- 文章生成区域 -->
+            <div class="generate-section">
+                <h2>生成文章</h2>
+
+                <div class="form-group">
+                    <label for="topicInput">文章标题/主题:</label>
+                    <textarea id="topicInput" rows="3" placeholder="请输入文章标题或主题，每行一个"></textarea>
+                    <p class="help-text">提示：可以输入多个标题，每行一个，系统将为每个标题生成独立的文章</p>
+                </div>
+
+                <div class="button-group">
+                    <button id="generateBtn" class="btn btn-primary btn-large">开始生成</button>
+                    <button id="clearBtn" class="btn btn-secondary">清空</button>
+                </div>
+
+                <!-- 进度显示 -->
+                <div id="progressArea" class="progress-area" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <p id="progressText" class="progress-text">准备中...</p>
+                </div>
+
+                <!-- 结果显示 -->
+                <div id="resultsArea" class="results-area" style="display: none;">
+                    <h3>生成结果</h3>
+                    <div id="resultsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>由 Google Gemini API 提供支持 | 图片来源: Unsplash</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
