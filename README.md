@@ -2,6 +2,9 @@
 
 `张飞吃豆芽` 是一个基于 Google Gemini API 的智能文章创作工具，可以根据用户提供的标题或内容自动生成文章，并从 Unsplash 下载配图，最终生成包含图片的 Word 文档。
 
+<img width="1591" height="789" alt="image" src="https://github.com/user-attachments/assets/f2ffb477-a45f-4a75-a9f2-0ab7e3861e85" />
+
+
 ## 功能特性
 
 - **智能文章生成**: 使用 Google Gemini API 根据标题或主题生成高质量文章
