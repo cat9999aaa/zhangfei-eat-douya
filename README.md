@@ -90,7 +90,7 @@
 
 ### 1. 环境要求
 
-- Python 3.7+
+- Python 3.10+
 - Pandoc (必需，用于生成 Word 文档)
 
 ### 2. 安装 Pandoc
