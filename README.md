@@ -113,7 +113,7 @@ sudo yum install pandoc      # CentOS/RHEL
 
 ```bash
 git clone <repository-url>
-cd zfcdy-ziyong
+cd zfcdy
 ```
 
 ### 4. 安装 Python 依赖
