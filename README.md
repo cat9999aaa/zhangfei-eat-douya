@@ -463,8 +463,7 @@ MIT License
 ## 联系方式
 
 如有问题或建议，欢迎通过以下方式联系：
-- 提交 Issue [<sup>11</sup>](https://github.com/your-repo/issues)
-- 发送邮件到: your-email@example.com
+绿泡泡：Y2F0OTk5OXNzcw==
 
 ---
 
