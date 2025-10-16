@@ -20,8 +20,7 @@ CORS(app)
 generation_tasks = {}
 task_lock = threading.Lock()
 
-# 确保输出目录存在
-os.makedirs('output', exist_ok=True)
+# 确保基础目录存在（output目录会在配置加载后根据配置创建）
 os.makedirs('uploads', exist_ok=True)
 
 # 允许的图片文件扩展名
@@ -316,7 +315,8 @@ def handle_config():
             'image_source_priority': config.get('image_source_priority', ['unsplash', 'pexels', 'pixabay', 'local']),
             'local_image_directories': config.get('local_image_directories', [{'path': 'pic', 'tags': ['default']}]),
             'enable_user_upload': config.get('enable_user_upload', True),
-            'uploaded_images_dir': config.get('uploaded_images_dir', 'uploads')
+            'uploaded_images_dir': config.get('uploaded_images_dir', 'uploads'),
+            'output_directory': config.get('output_directory', 'output')
         })
 
     elif request.method == 'POST':
@@ -333,7 +333,8 @@ def handle_config():
             'image_source_priority': new_config.get('image_source_priority', old_config.get('image_source_priority', ['unsplash', 'pexels', 'pixabay', 'local'])),
             'local_image_directories': new_config.get('local_image_directories', old_config.get('local_image_directories', [{'path': 'pic', 'tags': ['default']}])),
             'enable_user_upload': new_config.get('enable_user_upload', old_config.get('enable_user_upload', True)),
-            'uploaded_images_dir': new_config.get('uploaded_images_dir', old_config.get('uploaded_images_dir', 'uploads'))
+            'uploaded_images_dir': new_config.get('uploaded_images_dir', old_config.get('uploaded_images_dir', 'uploads')),
+            'output_directory': new_config.get('output_directory', old_config.get('output_directory', 'output'))
         }
 
         # 处理 API 密钥
@@ -528,7 +529,9 @@ def _execute_generation_task(task_id, topics, config):
                         ext = url.split('.')[-1].lower()
                         if ext not in ALLOWED_EXTENSIONS:
                             ext = 'jpg'
-                        temp_path = f'output/temp_url_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.{ext}'
+                        output_dir = config.get('output_directory', 'output')
+                        os.makedirs(output_dir, exist_ok=True)
+                        temp_path = os.path.join(output_dir, f'temp_url_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.{ext}')
                         with open(temp_path, 'wb') as f:
                             f.write(response.content)
                         user_image_path = temp_path
@@ -757,7 +760,10 @@ def download_unsplash_image(keyword, access_key):
         image_response.raise_for_status()
 
         # 保存到临时位置
-        image_path = f'output/temp_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.jpg'
+        config = load_config()
+        output_dir = config.get('output_directory', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        image_path = os.path.join(output_dir, f'temp_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.jpg')
         with open(image_path, 'wb') as f:
             f.write(image_response.content)
 
@@ -789,7 +795,10 @@ def download_pexels_image(keyword, api_key):
         image_response.raise_for_status()
 
         # 保存到临时位置
-        image_path = f'output/temp_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.jpg'
+        config = load_config()
+        output_dir = config.get('output_directory', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        image_path = os.path.join(output_dir, f'temp_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.jpg')
         with open(image_path, 'wb') as f:
             f.write(image_response.content)
 
@@ -826,7 +835,10 @@ def download_pixabay_image(keyword, api_key):
         image_response.raise_for_status()
 
         # 保存到临时位置
-        image_path = f'output/temp_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.jpg'
+        config = load_config()
+        output_dir = config.get('output_directory', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        image_path = os.path.join(output_dir, f'temp_{datetime.now().strftime("%Y%m%d%H%M%S")}_{uuid.uuid4().hex[:8]}.jpg')
         with open(image_path, 'wb') as f:
             f.write(image_response.content)
 
@@ -879,9 +891,14 @@ def create_word_document(title, content, image_path=None, enable_image=True, pan
 
     # 生成文件名（清理非法字符）
     safe_title = re.sub(r'[\\/*?:"<>|]', '', title)[:50]
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'{safe_title}_{timestamp}.docx'
-    filepath = os.path.join('output', filename)
+    filename = f'{safe_title}.docx'
+
+    # 从配置中获取输出目录，默认为 'output'
+    config = load_config()
+    output_dir = config.get('output_directory', 'output')
+    os.makedirs(output_dir, exist_ok=True)
+
+    filepath = os.path.join(output_dir, filename)
 
     # 处理内容：在第一段后插入图片标记
     lines = content.split('\n')
@@ -1005,7 +1022,9 @@ def retry_failed_topics():
 @app.route('/api/download/<filename>')
 def download_file(filename):
     """下载生成的文档"""
-    filepath = os.path.join('output', filename)
+    config = load_config()
+    output_dir = config.get('output_directory', 'output')
+    filepath = os.path.join(output_dir, filename)
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
     return jsonify({'error': '文件不存在'}), 404
@@ -1014,17 +1033,23 @@ def download_file(filename):
 def get_history():
     """获取历史记录"""
     try:
+        config = load_config()
+        output_dir = config.get('output_directory', 'output')
+
         files = []
-        for filename in os.listdir('output'):
-            if filename.endswith('.docx') and not filename.startswith('~'):
-                filepath = os.path.join('output', filename)
-                stats = os.stat(filepath)
-                files.append({
-                    'filename': filename,
-                    'size': stats.st_size,
-                    'created': datetime.fromtimestamp(stats.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
-                    'title': filename.rsplit('_', 1)[0] if '_' in filename else filename.replace('.docx', '')
-                })
+        if os.path.exists(output_dir):
+            for filename in os.listdir(output_dir):
+                if filename.endswith('.docx') and not filename.startswith('~'):
+                    filepath = os.path.join(output_dir, filename)
+                    stats = os.stat(filepath)
+                    # 文件名不再带时间戳，直接显示完整文件名作为标题
+                    title = filename.replace('.docx', '')
+                    files.append({
+                        'filename': filename,
+                        'size': stats.st_size,
+                        'created': datetime.fromtimestamp(stats.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'title': title
+                    })
 
         # 按创建时间倒序排列
         files.sort(key=lambda x: x['created'], reverse=True)

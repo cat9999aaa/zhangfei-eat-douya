@@ -11,6 +11,7 @@ const pixabayKey = document.getElementById('pixabayKey');
 const testPixabayBtn = document.getElementById('testPixabay');
 const pixabayTestResult = document.getElementById('pixabayTestResult');
 const pandocPath = document.getElementById('pandocPath');
+const outputDirectory = document.getElementById('outputDirectory');
 const defaultModel = document.getElementById('defaultModel');
 const defaultPrompt = document.getElementById('defaultPrompt');
 const maxConcurrentTasks = document.getElementById('maxConcurrentTasks');
@@ -50,6 +51,9 @@ async function loadConfig() {
             }
             if (config.pandoc_path) {
                 pandocPath.value = config.pandoc_path;
+            }
+            if (config.output_directory) {
+                outputDirectory.value = config.output_directory;
             }
             if (config.default_prompt) {
                 defaultPrompt.value = config.default_prompt;
@@ -115,6 +119,7 @@ saveConfigBtn.addEventListener('click', async () => {
     const newConfig = {
         gemini_base_url: geminiBaseUrl.value || 'https://generativelanguage.googleapis.com',
         pandoc_path: pandocPath.value,
+        output_directory: outputDirectory.value || 'output',
         default_model: defaultModel.value,
         default_prompt: defaultPrompt.value,
         max_concurrent_tasks: maxConcurrentTasks.value || 3
@@ -235,6 +240,7 @@ resetConfigBtn.addEventListener('click', () => {
         pexelsKey.value = '';
         pixabayKey.value = '';
         pandocPath.value = '';
+        outputDirectory.value = 'output';
         defaultModel.value = 'gemini-pro';
         defaultPrompt.value = '';
         maxConcurrentTasks.value = 3;

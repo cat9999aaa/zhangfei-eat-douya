@@ -44,9 +44,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 保存页面状态
 function savePageState() {
     const topics = getAllTopics();
+
+    // 保存图片设置
+    const imageSettings = {};
+    topicImages.forEach((imageData, index) => {
+        // 只保存关键信息，不保存 File 对象和大的 preview 数据
+        imageSettings[index] = {
+            type: imageData.type,
+            filename: imageData.filename,
+            uploadedPath: imageData.uploadedPath,
+            url: imageData.url,
+            preview: imageData.preview // URL 类型的 preview 可以保存
+        };
+    });
+
     const state = {
         topics: topics,
         enableImage: enableImage.checked,
+        imageSettings: imageSettings,
         timestamp: Date.now()
     };
     localStorage.setItem('writePageState', JSON.stringify(state));
@@ -76,6 +91,15 @@ function restorePageState() {
                 // 恢复图片选项
                 if (state.enableImage !== undefined) {
                     enableImage.checked = state.enableImage;
+                }
+
+                // 恢复图片设置
+                if (state.imageSettings) {
+                    Object.entries(state.imageSettings).forEach(([index, imageData]) => {
+                        const topicIndex = parseInt(index);
+                        topicImages.set(topicIndex, imageData);
+                        updateImageButtonStatus(topicIndex, true);
+                    });
                 }
             } else {
                 // 状态过期，添加第一个输入框
@@ -134,17 +158,36 @@ function addTopicInput() {
     removeBtn.className = 'remove-btn';
     removeBtn.onclick = () => {
         const index = parseInt(wrapper.dataset.index);
+        // 删除图片设置
         topicImages.delete(index);
         wrapper.remove();
         topicCount--;
         updateAddButtonState();
+        // 保存状态到 localStorage
         savePageState();
     };
 
     wrapper.appendChild(input);
     wrapper.appendChild(imageBtn);
-    // 如果不是第一个输入框，显示删除按钮
-    if (currentIndex > 0) {
+
+    // 如果是第一个输入框，显示清空按钮
+    if (currentIndex === 0) {
+        const clearInputBtn = document.createElement('button');
+        clearInputBtn.textContent = '清空';
+        clearInputBtn.className = 'clear-input-btn';
+        clearInputBtn.onclick = () => {
+            const index = parseInt(wrapper.dataset.index);
+            // 清空输入内容
+            input.value = '';
+            // 清除图片设置
+            topicImages.delete(index);
+            updateImageButtonStatus(index, false);
+            // 保存状态到 localStorage
+            savePageState();
+        };
+        wrapper.appendChild(clearInputBtn);
+    } else {
+        // 其他输入框显示删除按钮
         wrapper.appendChild(removeBtn);
     }
 
@@ -182,9 +225,12 @@ addTopicBtn.addEventListener('click', addTopicInput);
 clearBtn.addEventListener('click', () => {
     topicsContainer.innerHTML = '';
     topicCount = 0;
+    topicImages.clear(); // 清除所有图片设置
     addTopicInput();
     resultsArea.style.display = 'none';
     progressArea.style.display = 'none';
+    // 保存状态到 localStorage
+    savePageState();
 });
 
 let currentTaskId = null;
@@ -795,6 +841,9 @@ saveImageBtn.addEventListener('click', async () => {
                 // 更新按钮状态
                 updateImageButtonStatus(currentTopicIndex, true);
 
+                // 保存到 localStorage
+                savePageState();
+
                 showModalStatus('✓ 图片设置成功！', 'success');
                 setTimeout(() => {
                     closeImageModal();
@@ -813,6 +862,10 @@ saveImageBtn.addEventListener('click', async () => {
         // URL类型直接保存
         topicImages.set(currentTopicIndex, currentImageData);
         updateImageButtonStatus(currentTopicIndex, true);
+
+        // 保存到 localStorage
+        savePageState();
+
         showModalStatus('✓ 图片设置成功！', 'success');
         setTimeout(() => {
             closeImageModal();
@@ -825,6 +878,9 @@ clearImageBtn.addEventListener('click', () => {
     if (currentTopicIndex !== null) {
         topicImages.delete(currentTopicIndex);
         updateImageButtonStatus(currentTopicIndex, false);
+
+        // 保存到 localStorage
+        savePageState();
     }
     closeImageModal();
 });

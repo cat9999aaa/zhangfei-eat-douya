@@ -429,6 +429,21 @@ footer {
     background: #d32f2f;
 }
 
+.topic-input-wrapper .clear-input-btn {
+    padding: 8px 12px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.topic-input-wrapper .clear-input-btn:hover {
+    background: #f57c00;
+}
+
 #topicsContainer {
     margin-bottom: 15px;
 }
