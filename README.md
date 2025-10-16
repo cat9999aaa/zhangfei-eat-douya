@@ -2,8 +2,9 @@
 
 一个功能强大的基于 Google Gemini API 的智能文章创作工具，支持批量生成文章、自动配图、自定义写作风格，并输出高质量的 Word 文档。
 
-![项目截图](screenshot.png)
-## 主要特性
+!项目截图 <sup>1</sup> [<sup>1</sup>](screenshot.png)
+
+## 功能特性
 
 ### 📝 智能文章创作
 - **AI 驱动**: 使用 Google Gemini API 生成高质量文章
@@ -94,7 +95,7 @@
 ### 2. 安装 Pandoc
 
 **Windows**:
-下载并安装 [Pandoc](https://pandoc.org/installing.html)，默认安装路径为 `C:\Program Files\Pandoc\pandoc.exe`
+下载并安装 Pandoc [<sup>2</sup>](https://pandoc.org/installing.html)，默认安装路径为 `C:\Program Files\Pandoc\pandoc.exe`
 
 **macOS**:
 ```bash
@@ -135,7 +136,7 @@ python app.py
 1. 访问 `http://localhost:5000`
 2. 点击导航栏的"配置"进入配置页面
 3. 配置必需项：
-   - **Gemini API Key**: 从 [Google AI Studio](https://makersuite.google.com/app/apikey) 获取
+   - **Gemini API Key**: 从 Google AI Studio [<sup>3</sup>](https://makersuite.google.com/app/apikey) 获取
    - **Pandoc 路径**: 设置 Pandoc 可执行文件路径
 4. 可选配置：
    - 图片 API Keys (Unsplash/Pexels/Pixabay)
@@ -360,13 +361,13 @@ POST /api/test-pixabay
 ### Q: 如何获取 API Key？
 
 **Gemini API**:
-1. 访问 [Google AI Studio](https://makersuite.google.com/app/apikey)
+1. 访问 Google AI Studio [<sup>3</sup>](https://makersuite.google.com/app/apikey)
 2. 登录 Google 账号
 3. 点击"Create API Key"
 4. 复制密钥
 
 **Unsplash API**:
-1. 访问 [Unsplash Developers](https://unsplash.com/developers)
+1. 访问 Unsplash Developers [<sup>4</sup>](https://unsplash.com/developers)
 2. 注册开发者账号
 3. 创建应用
 4. 获取 Access Key
@@ -451,17 +452,17 @@ MIT License
 
 ## 致谢
 
-- [Google Gemini](https://deepmind.google/technologies/gemini/) - AI 文章生成
-- [Unsplash](https://unsplash.com/) - 高质量图片
-- [Pexels](https://www.pexels.com/) - 免费图片资源
-- [Pixabay](https://pixabay.com/) - 免费图片资源
-- [Flask](https://flask.palletsprojects.com/) - Web 框架
-- [Pandoc](https://pandoc.org/) - 文档转换工具
+- Google Gemini [<sup>5</sup>](https://deepmind.google/technologies/gemini/) - AI 文章生成
+- Unsplash [<sup>6</sup>](https://unsplash.com/) - 高质量图片
+- Pexels [<sup>7</sup>](https://www.pexels.com/) - 免费图片资源
+- Pixabay [<sup>8</sup>](https://pixabay.com/) - 免费图片资源
+- Flask [<sup>9</sup>](https://flask.palletsprojects.com/) - Web 框架
+- Pandoc [<sup>10</sup>](https://pandoc.org/) - 文档转换工具
 
 ## 联系方式
 
 如有问题或建议，欢迎通过以下方式联系：
-- 提交 [Issue](https://github.com/your-repo/issues)
+- 提交 Issue [<sup>11</sup>](https://github.com/your-repo/issues)
 - 发送邮件到: your-email@example.com
 
 ---
