@@ -2,7 +2,8 @@
 
 一个功能强大的基于 Google Gemini API 的智能文章创作工具，支持批量生成文章、自动配图、自定义写作风格，并输出高质量的 Word 文档。
 
-!项目截图 <sup>1</sup> [<sup>1</sup>](screenshot.png)
+<img width="1519" height="750" alt="image" src="https://github.com/user-attachments/assets/6d66baf5-e8e6-44aa-aaee-361eae27ebfe" />
+
 
 ## 功能特性
 
