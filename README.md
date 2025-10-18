@@ -5,6 +5,8 @@
 
 > 一款功能强大的、运行于本地的 AI 智能文章创作工具。它深度集成 Google Gemini API，支持批量生成、自动配图、风格自定义，并能一键输出高质量的 Word 文档。
 
+[![Star History Chart](https://api.star-history.com/svg?repos=cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)](https://www.star-history.com/#cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)
+
 ![项目截图](screenshot.png)
 
 ---
