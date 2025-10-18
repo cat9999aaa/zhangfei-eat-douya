@@ -25,6 +25,8 @@
             <select id="defaultModel">
                 <option value="gemini-pro">gemini-pro</option>
             </select>
+            <button id="testDefaultModel" class="btn btn-secondary btn-small" type="button">测试主模型</button>
+            <div id="defaultModelTestResult" class="test-result" style="display: none;"></div>
         </div>
 
         <div class="form-group">
@@ -65,12 +67,78 @@
             <label>图片源优先级:</label>
             <p class="help-text">拖拽排序，程序将按顺序尝试获取图片，如果前一个失败则尝试下一个</p>
             <ul id="imagePriorityList" class="sortable-list">
-                <li data-source="unsplash">Unsplash</li>
+                <li data-source="comfyui">ComfyUI 自动生成</li>
+                <li data-source="user_uploaded">用户上传</li>
                 <li data-source="pexels">Pexels</li>
+                <li data-source="unsplash">Unsplash</li>
                 <li data-source="pixabay">Pixabay</li>
                 <li data-source="local">本地图库</li>
-                <li data-source="user_uploaded">用户上传</li>
             </ul>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>ComfyUI 图片生成</h2>
+        <div class="form-group">
+            <label class="checkbox-inline">
+                <input type="checkbox" id="comfyuiEnabled" checked>
+                启用 ComfyUI 自动生成图片
+            </label>
+            <p class="help-text">采样器、步数、模型等参数都在 Workflow 内设置，这里只需指定 Workflow 与风格。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiServerUrl">ComfyUI 服务地址:</label>
+            <input type="text" id="comfyuiServerUrl" value="http://127.0.0.1:8188" placeholder="http://127.0.0.1:8188">
+            <p class="help-text">默认监听本地 8188 端口，如使用代理/远程 ComfyUI，请在此修改。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiWorkflowPath">Workflow JSON 路径:</label>
+            <input type="text" id="comfyuiWorkflowPath" placeholder="workflows/comfyui_workflow.json">
+            <p class="help-text">在 ComfyUI 中复制 “API Prompt” 并保存为 JSON 文件后填入，支持相对路径。</p>
+        </div>
+
+        <p class="help-text">图片尺寸也由 workflow 节点控制，如需调整请在 ComfyUI 内修改后重新导出。</p>
+
+        <div class="form-group">
+            <label for="comfyuiImageCount">自动生成图片数量:</label>
+            <select id="comfyuiImageCount">
+                <option value="1">1 张</option>
+                <option value="3">3 张</option>
+            </select>
+            <p class="help-text">适用于系统自动生成/补齐的图片数量；用户手动上传几张就用几张。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiStyleTemplate">图片风格:</label>
+            <select id="comfyuiStyleTemplate"></select>
+            <p class="help-text">选择预设风格或“自定义”后填写下方提示词。</p>
+        </div>
+
+        <div class="form-group custom-style-block">
+            <label for="comfyuiPositiveStyle">默认正向风格提示词:</label>
+            <textarea id="comfyuiPositiveStyle" rows="3" placeholder="例如：realistic, cinematic lighting, detailed photography"></textarea>
+            <p class="help-text">仅当风格选择“自定义”时才生效。</p>
+        </div>
+
+        <div class="form-group custom-style-block">
+            <label for="comfyuiNegativeStyle">默认负向风格提示词:</label>
+            <textarea id="comfyuiNegativeStyle" rows="3" placeholder="例如：cartoon, lowres, watermark"></textarea>
+            <p class="help-text">仅当风格选择“自定义”时才生效。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiSummaryModel">图片摘要模型:</label>
+            <select id="comfyuiSummaryModel"></select>
+            <button id="testSummaryModel" class="btn btn-secondary btn-small" type="button">测试摘要模型</button>
+            <div id="summaryModelTestResult" class="test-result" style="display: none;"></div>
+            <p class="help-text">用于生成段落摘要的模型，沿用主写作模型的 API Key。</p>
+        </div>
+
+        <div class="form-group">
+            <button id="testComfyui" class="btn btn-secondary btn-small" type="button">测试 ComfyUI 工作流</button>
+            <div id="comfyuiTestResult" class="test-result" style="display: none;"></div>
         </div>
     </div>
 
@@ -173,6 +241,23 @@
 
 .sortable-list li:hover {
     background: #e6f3ff;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.checkbox-inline input {
+    margin: 0;
 }
 </style>
 

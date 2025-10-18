@@ -21,6 +21,48 @@ const configStatus = document.getElementById('configStatus');
 const addImageDirBtn = document.getElementById('addImageDir');
 const localImageDirs = document.getElementById('localImageDirs');
 
+const comfyuiEnabled = document.getElementById('comfyuiEnabled');
+const comfyuiServerUrl = document.getElementById('comfyuiServerUrl');
+const comfyuiWorkflowPath = document.getElementById('comfyuiWorkflowPath');
+const comfyuiImageCount = document.getElementById('comfyuiImageCount');
+const comfyuiStyleTemplate = document.getElementById('comfyuiStyleTemplate');
+const comfyuiPositiveStyle = document.getElementById('comfyuiPositiveStyle');
+const comfyuiNegativeStyle = document.getElementById('comfyuiNegativeStyle');
+const comfyuiSummaryModel = document.getElementById('comfyuiSummaryModel');
+const testComfyuiBtn = document.getElementById('testComfyui');
+const comfyuiTestResult = document.getElementById('comfyuiTestResult');
+const testDefaultModelBtn = document.getElementById('testDefaultModel');
+const defaultModelTestResult = document.getElementById('defaultModelTestResult');
+const testSummaryModelBtn = document.getElementById('testSummaryModel');
+const summaryModelTestResult = document.getElementById('summaryModelTestResult');
+
+const comfyuiDefaults = {
+    enabled: true,
+    server_url: 'http://127.0.0.1:8188',
+    queue_size: 2,
+    timeout_seconds: 180,
+    max_attempts: 2,
+    seed: -1,
+    workflow_path: ''
+};
+
+let comfyuiCurrentSettings = { ...comfyuiDefaults };
+
+function applyComfyuiSettings(settings = {}) {
+    const merged = { ...comfyuiDefaults, ...settings };
+    comfyuiCurrentSettings = { ...merged };
+    if (comfyuiEnabled) comfyuiEnabled.checked = !!merged.enabled;
+    if (comfyuiServerUrl) comfyuiServerUrl.value = merged.server_url || comfyuiDefaults.server_url;
+    if (comfyuiWorkflowPath) comfyuiWorkflowPath.value = merged.workflow_path || '';
+}
+
+function collectComfyuiSettings() {
+    const base = { ...comfyuiCurrentSettings };
+    base.enabled = comfyuiEnabled?.checked ?? comfyuiDefaults.enabled;
+    base.server_url = comfyuiServerUrl?.value?.trim() || comfyuiDefaults.server_url;
+    base.workflow_path = comfyuiWorkflowPath?.value?.trim() || '';
+    return base;
+}
 // 页面加载时加载配置
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig(); // loadConfig 内部会调用 loadModels
@@ -60,6 +102,43 @@ async function loadConfig() {
             }
             if (config.max_concurrent_tasks) {
                 maxConcurrentTasks.value = config.max_concurrent_tasks;
+            }
+
+            applyComfyuiSettings(config.comfyui_settings);
+
+            // 加载图片数量配置
+            if (comfyuiImageCount && config.comfyui_image_count) {
+                comfyuiImageCount.value = config.comfyui_image_count;
+            }
+
+            // 加载风格模板下拉选项
+            if (comfyuiStyleTemplate && config.comfyui_style_templates) {
+                comfyuiStyleTemplate.innerHTML = '';
+                config.comfyui_style_templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = template.label;
+                    comfyuiStyleTemplate.appendChild(option);
+                });
+                // 设置当前值
+                if (config.comfyui_style_template) {
+                    comfyuiStyleTemplate.value = config.comfyui_style_template;
+                }
+                // 初始化显示/隐藏自定义风格块
+                toggleCustomStyleBlocks();
+            }
+
+            // 加载摘要模型下拉选项（从模型列表动态获取）
+            await loadSummaryModels();
+            if (config.comfyui_summary_model) {
+                comfyuiSummaryModel.value = config.comfyui_summary_model;
+            }
+
+            if (comfyuiPositiveStyle) {
+                comfyuiPositiveStyle.value = config.comfyui_positive_style || '';
+            }
+            if (comfyuiNegativeStyle) {
+                comfyuiNegativeStyle.value = config.comfyui_negative_style || '';
             }
 
             // 加载本地图片目录
@@ -103,6 +182,56 @@ async function loadModels() {
     }
 }
 
+// 加载摘要模型列表（复用主模型列表，并添加特殊选项）
+async function loadSummaryModels() {
+    try {
+        const response = await fetch('/api/models');
+        if (response.ok) {
+            const data = await response.json();
+            comfyuiSummaryModel.innerHTML = '';
+
+            // 首先添加特殊选项
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '__default__';
+            defaultOption.textContent = '使用主写作模型';
+            comfyuiSummaryModel.appendChild(defaultOption);
+
+            // 然后添加所有可用模型
+            data.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.name;
+                option.textContent = model.display_name || model.name;
+                comfyuiSummaryModel.appendChild(option);
+            });
+        } else {
+            // 加载失败，提供默认选项
+            comfyuiSummaryModel.innerHTML = '<option value="__default__">使用主写作模型 (加载列表失败)</option>';
+        }
+    } catch (error) {
+        console.error('加载摘要模型列表失败:', error);
+        comfyuiSummaryModel.innerHTML = '<option value="__default__">使用主写作模型 (加载列表失败)</option>';
+    }
+}
+
+// 切换自定义风格块的显示/隐藏
+function toggleCustomStyleBlocks() {
+    const customBlocks = document.querySelectorAll('.custom-style-block');
+    const isCustom = comfyuiStyleTemplate && comfyuiStyleTemplate.value === 'custom';
+
+    customBlocks.forEach(block => {
+        if (isCustom) {
+            block.style.display = 'block';
+        } else {
+            block.style.display = 'none';
+        }
+    });
+}
+
+// 监听风格模板选择变化
+if (comfyuiStyleTemplate) {
+    comfyuiStyleTemplate.addEventListener('change', toggleCustomStyleBlocks);
+}
+
 // 显示状态消息
 function showStatus(message, isSuccess) {
     configStatus.textContent = message;
@@ -122,7 +251,13 @@ saveConfigBtn.addEventListener('click', async () => {
         output_directory: outputDirectory.value || 'output',
         default_model: defaultModel.value,
         default_prompt: defaultPrompt.value,
-        max_concurrent_tasks: maxConcurrentTasks.value || 3
+        max_concurrent_tasks: maxConcurrentTasks.value || 3,
+        comfyui_settings: collectComfyuiSettings(),
+        comfyui_image_count: parseInt(comfyuiImageCount?.value || 1),
+        comfyui_style_template: comfyuiStyleTemplate?.value || 'custom',
+        comfyui_positive_style: comfyuiPositiveStyle?.value?.trim() || '',
+        comfyui_negative_style: comfyuiNegativeStyle?.value?.trim() || '',
+        comfyui_summary_model: comfyuiSummaryModel?.value || '__default__'
     };
 
     // 只在用户输入了新值时添加到请求中
@@ -244,6 +379,20 @@ resetConfigBtn.addEventListener('click', () => {
         defaultModel.value = 'gemini-pro';
         defaultPrompt.value = '';
         maxConcurrentTasks.value = 3;
+        applyComfyuiSettings(comfyuiDefaults);
+        if (comfyuiImageCount) comfyuiImageCount.value = 1;
+        if (comfyuiStyleTemplate) comfyuiStyleTemplate.value = 'custom';
+        if (comfyuiPositiveStyle) comfyuiPositiveStyle.value = '';
+        if (comfyuiNegativeStyle) comfyuiNegativeStyle.value = '';
+        if (comfyuiSummaryModel) comfyuiSummaryModel.value = '__default__';
+        toggleCustomStyleBlocks(); // 更新自定义块显示状态
+        if (typeof reorderPriorityList === 'function' && imagePriorityList) {
+            reorderPriorityList(['comfyui', 'user_uploaded', 'pexels', 'unsplash', 'pixabay', 'local']);
+        }
+        if (comfyuiTestResult) {
+            comfyuiTestResult.style.display = 'none';
+            comfyuiTestResult.textContent = '';
+        }
         showStatus('已重置为默认值（尚未保存）', true);
     }
 });
@@ -334,6 +483,157 @@ if (testPixabayBtn) {
         } finally {
             testPixabayBtn.disabled = false;
             testPixabayBtn.textContent = '测试 Pixabay API';
+        }
+    });
+}
+
+// 测试主模型
+if (testDefaultModelBtn) {
+    testDefaultModelBtn.addEventListener('click', async () => {
+        const modelName = defaultModel.value;
+        const apiKey = geminiApiKey.value || ''; // 如果输入了新的就用新的，否则后端会用已保存的
+        const baseUrl = geminiBaseUrl.value || 'https://generativelanguage.googleapis.com';
+
+        if (!modelName) {
+            defaultModelTestResult.textContent = '请先选择模型';
+            defaultModelTestResult.className = 'test-result error';
+            defaultModelTestResult.style.display = 'block';
+            return;
+        }
+
+        testDefaultModelBtn.disabled = true;
+        testDefaultModelBtn.textContent = '测试中...';
+        defaultModelTestResult.textContent = '正在测试模型...';
+        defaultModelTestResult.className = 'test-result info';
+        defaultModelTestResult.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/test-model', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model_name: modelName,
+                    api_key: apiKey,
+                    base_url: baseUrl
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                defaultModelTestResult.textContent = `✓ ${result.message}\n回复: ${result.reply}`;
+                defaultModelTestResult.className = 'test-result success';
+            } else {
+                defaultModelTestResult.textContent = `✗ ${result.error}`;
+                defaultModelTestResult.className = 'test-result error';
+            }
+        } catch (error) {
+            defaultModelTestResult.textContent = `✗ 测试失败：${error.message}`;
+            defaultModelTestResult.className = 'test-result error';
+        } finally {
+            testDefaultModelBtn.disabled = false;
+            testDefaultModelBtn.textContent = '测试主模型';
+        }
+    });
+}
+
+// 测试摘要模型
+if (testSummaryModelBtn) {
+    testSummaryModelBtn.addEventListener('click', async () => {
+        const modelName = comfyuiSummaryModel.value;
+
+        if (!modelName || modelName === '__default__') {
+            summaryModelTestResult.textContent = '请先选择具体的摘要模型（不能选择"使用主写作模型"）';
+            summaryModelTestResult.className = 'test-result error';
+            summaryModelTestResult.style.display = 'block';
+            return;
+        }
+
+        const apiKey = geminiApiKey.value || '';
+        const baseUrl = geminiBaseUrl.value || 'https://generativelanguage.googleapis.com';
+
+        testSummaryModelBtn.disabled = true;
+        testSummaryModelBtn.textContent = '测试中...';
+        summaryModelTestResult.textContent = '正在测试模型...';
+        summaryModelTestResult.className = 'test-result info';
+        summaryModelTestResult.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/test-model', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model_name: modelName,
+                    api_key: apiKey,
+                    base_url: baseUrl
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                summaryModelTestResult.textContent = `✓ ${result.message}\n回复: ${result.reply}`;
+                summaryModelTestResult.className = 'test-result success';
+            } else {
+                summaryModelTestResult.textContent = `✗ ${result.error}`;
+                summaryModelTestResult.className = 'test-result error';
+            }
+        } catch (error) {
+            summaryModelTestResult.textContent = `✗ 测试失败：${error.message}`;
+            summaryModelTestResult.className = 'test-result error';
+        } finally {
+            testSummaryModelBtn.disabled = false;
+            testSummaryModelBtn.textContent = '测试摘要模型';
+        }
+    });
+}
+
+// 测试 ComfyUI Workflow
+if (testComfyuiBtn) {
+    testComfyuiBtn.addEventListener('click', async () => {
+        const settings = collectComfyuiSettings();
+
+        if (!settings.workflow_path) {
+            comfyuiTestResult.textContent = '请先配置 Workflow JSON 路径';
+            comfyuiTestResult.className = 'test-result error';
+            comfyuiTestResult.style.display = 'block';
+            return;
+        }
+
+        testComfyuiBtn.disabled = true;
+        testComfyuiBtn.textContent = '测试中...';
+        if (comfyuiTestResult) {
+            comfyuiTestResult.textContent = '正在调用 ComfyUI...';
+            comfyuiTestResult.className = 'test-result info';
+            comfyuiTestResult.style.display = 'block';
+        }
+
+        try {
+            const response = await fetch('/api/test-comfyui', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    comfyui_settings: settings,
+                    comfyui_positive_style: comfyuiPositiveStyle?.value?.trim() || '',
+                    comfyui_negative_style: comfyuiNegativeStyle?.value?.trim() || ''
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                const path = result.image_path || '已生成图片';
+                comfyuiTestResult.textContent = `✓ 测试成功！输出文件：${path}`;
+                comfyuiTestResult.className = 'test-result success';
+            } else {
+                comfyuiTestResult.textContent = `✗ 测试失败：${result.error}`;
+                comfyuiTestResult.className = 'test-result error';
+            }
+        } catch (error) {
+            comfyuiTestResult.textContent = `✗ 测试失败：${error.message}`;
+            comfyuiTestResult.className = 'test-result error';
+        } finally {
+            testComfyuiBtn.disabled = false;
+            testComfyuiBtn.textContent = '测试 ComfyUI 工作流';
         }
     });
 }

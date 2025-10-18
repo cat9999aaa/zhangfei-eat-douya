@@ -14,14 +14,24 @@
 - **自动标题提取**: 智能提取文章标题作为文件名
 
 ### 🖼️ 灵活的图片配图
+- **多图片生成**:
+  - 支持每篇文章生成 1 或 3 张图片（可在配置中设置）
+  - 图片自动均匀分布在文章段落中（首段后、中间段、末段）
+  - 每张图片根据所在段落内容生成专属视觉描述
 - **多种图片来源**:
   - Unsplash API - 高质量专业摄影图片
   - Pexels API - 免费商用图片库
   - Pixabay API - 多样化图片资源
   - 本地图库 - 使用本地图片目录
   - 用户上传 - 支持为每个标题单独上传图片
+  - ComfyUI（Stable Diffusion）- 本地生成定制配图，失败时自动回退
+- **智能图片风格管理**:
+  - 预设风格模板：写实摄影、赛博朋克、商务插画、自定义等
+  - 统一的风格提示词应用于所有生成的图片
+  - 段落智能摘要：为每个段落生成英文视觉描述，提高图片相关性
+  - 可选择专门的摘要模型或使用主写作模型
 - **图片来源优先级**: 可自定义图片获取的优先级顺序（拖拽排序）
-- **智能关键词提取**: 自动从文章中提取适合的英文关键词搜索配图
+- **智能混合使用**: 用户上传的图片优先使用，系统自动生成剩余数量
 - **多种上传方式**:
   - 本地文件上传
   - 剪贴板粘贴
@@ -41,6 +51,11 @@
   - Gemini API Key 和 Base URL
   - Unsplash、Pexels、Pixabay API Key
   - API 测试功能，验证配置是否正确
+- **ComfyUI 配置**: 管理服务地址、Workflow JSON、采样参数、Checkpoint/VAE、Refiner 及并发能力，并支持一键测试流程
+  - 可设置生成图片数量（1 或 3 张）
+  - 提供多种预设风格模板（写实摄影、赛博朋克、商务插画等）
+  - 可设置默认的正/负向风格提示词，统一图片风格
+  - 可选择专门的段落摘要模型，提升图片与内容的匹配度
 - **本地图库配置**: 支持配置多个本地图片目录及标签
 - **输出目录配置**: 自定义文档输出位置
 - **并发任务控制**: 设置同时生成文章的数量（1-10）
@@ -89,7 +104,7 @@
 
 ### 1. 环境要求
 
-- Python 3.7+
+- Python 3.10+
 - Pandoc (必需，用于生成 Word 文档)
 
 ### 2. 安装 Pandoc
@@ -111,8 +126,8 @@ sudo yum install pandoc      # CentOS/RHEL
 ### 3. 克隆项目
 
 ```bash
-git clone <repository-url>
-cd zfcdy-ziyong
+git clone https://github.com/cat9999aaa/zhangfei-eat-douya.git
+cd zfcdy
 ```
 
 ### 4. 安装 Python 依赖
@@ -178,6 +193,16 @@ python app.py
 2. 包含实际案例
 3. 结构清晰，有小标题
 ```
+
+
+
+### ComfyUI 工作流准备与测试
+
+1. 在 ComfyUI 中调试好节点流程，点击右上角「队列提示 → 复制 API Prompt」，将 JSON 保存到项目目录（例如 workflows/comfyui_base.json）。
+2. 在 CLIP Text Encode（正/负向）节点的文本框中使用 `{{positive_prompt}}`、`{{negative_prompt}}` 占位符，其余自定义描述可以写在占位符前后；程序会把生成的提示词替换进去。
+3. seed / steps / CFG / 模型等参数请直接在 workflow 中设定，本程序不会再覆盖。
+4. 打开配置页面仅需填写 Workflow JSON 路径并保存。
+5. 点击「测试 ComfyUI 工作流」，系统会调用该 workflow 生成一张测试图，并返回文件路径或错误信息，方便排查。
 
 ## 项目结构
 
@@ -355,6 +380,11 @@ POST /api/test-pixabay
 | `image_source_priority` | array | ❌ | 图片来源优先级 |
 | `local_image_directories` | array | ❌ | 本地图库配置 |
 | `uploaded_images_dir` | string | ❌ | 上传图片保存目录 |
+| `comfyui_image_count` | int | ❌ | 每篇文章生成图片数量（1 或 3，默认 1） |
+| `comfyui_style_template` | string | ❌ | 图片风格模板（custom/realistic_photo/cyberpunk/business，默认 custom） |
+| `comfyui_positive_style` | string | ❌ | 正向风格提示词 |
+| `comfyui_negative_style` | string | ❌ | 负向风格提示词 |
+| `comfyui_summary_model` | string | ❌ | 段落摘要模型（__default__ 使用主模型，或指定其他模型） |
 
 ## 常见问题
 
@@ -462,8 +492,7 @@ MIT License
 ## 联系方式
 
 如有问题或建议，欢迎通过以下方式联系：
-- 提交 Issue [<sup>11</sup>](https://github.com/your-repo/issues)
-- 发送邮件到: your-email@example.com
+- 绿泡泡Y2F0OTk5OXNzcw==
 
 ---
 
