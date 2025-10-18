@@ -12,6 +12,7 @@
 ## 目录
 - [核心功能](#-核心功能)
 - [快速启动-windows-用户](#-快速启动-windows-用户)
+- [快速启动-macos-用户](#-快速启动-macos-用户)
 - [详细使用指南](#-详细使用指南)
 - [高级功能](#-高级功能)
   - [ComfyUI-工作流配置](#comfyui-工作流配置)
@@ -61,6 +62,48 @@
     - 检查并安装所有必需的 Python 依赖库。
     - 启动 Web 应用服务。
     - 在你的默认浏览器中自动打开 `http://127.0.0.1:5000`。
+
+---
+
+## 🚀 快速启动 (macOS 用户)
+
+我们为 macOS 用户提供了"开箱即用"的一键启动脚本，自动处理虚拟环境配置。
+
+#### **环境准备**
+1.  安装 [Python 3.10+](https://www.python.org/downloads/)。
+    - 或通过 Homebrew 安装：`brew install python@3.10`
+2.  安装 [Pandoc](https://pandoc.org/installing.html) (文档转换工具)。
+    - 推荐通过 Homebrew 安装：`brew install pandoc`
+3.  安装 [Git](https://git-scm.com/downloads/) (代码克隆工具)。
+    - macOS 通常已预装 Git，可通过 `git --version` 检查。
+
+#### **启动步骤**
+1.  **克隆项目代码**：
+    ```bash
+    git clone https://github.com/cat9999aaa/zhangfei-eat-douya.git
+    cd zhangfei-eat-douya
+    ```
+
+2.  **一键启动**：
+    在终端中运行以下命令：
+    ```bash
+    ./start.sh
+    ```
+
+    如果遇到权限问题，请先执行：
+    ```bash
+    chmod +x start.sh
+    ./start.sh
+    ```
+
+    脚本会自动完成以下操作：
+    - **自动创建 Python 虚拟环境** (首次运行时，在 `venv` 目录下)。
+    - **激活虚拟环境**，避免 macOS 的 externally-managed-environment 限制。
+    - **在虚拟环境中安装所有必需的 Python 依赖库**。
+    - **启动 Web 应用服务**。
+    - **在你的默认浏览器中自动打开** `http://127.0.0.1:5000`。
+
+> **💡 提示**：脚本使用 Python 虚拟环境 (venv) 来隔离项目依赖，这是 Python 开发的最佳实践。首次运行时会创建 `venv` 目录，后续运行会直接使用已有的虚拟环境。
 
 ---
 
@@ -134,9 +177,11 @@
 .
 ├── app.py              # Flask 主应用
 ├── start.bat           # Windows 一键启动脚本
+├── start.sh            # macOS/Linux 一键启动脚本
 ├── requirements.txt    # Python 依赖
 ├── config.json         # 配置文件 (首次运行后生成)
 ├── README.md           # 本文档
+├── venv/               # Python 虚拟环境 (macOS/Linux 首次运行后生成)
 ├── templates/          # HTML 页面模板
 │   ├── layout.html
 │   ├── write.html
@@ -187,6 +232,9 @@ A: 这是因为程序找不到 Pandoc。请前往配置页面，填写正确的 
 -   **Gemini**: 前往 [Google AI Studio](https://makersuite.google.com/app/apikey)。
 -   **Unsplash**: 前往 [Unsplash Developers](https://unsplash.com/developers)。
 -   **Pexels / Pixabay**: 访问其对应的开发者平台注册并创建应用即可获取。
+
+**Q: 如何停止 macOS 上运行的应用？**
+A: 在运行 `start.sh` 的终端窗口中按 `Ctrl+C`，或直接关闭该终端窗口即可停止应用。
 
 ---
 
