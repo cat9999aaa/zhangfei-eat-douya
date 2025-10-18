@@ -5,8 +5,6 @@
 
 > 一款功能强大的、运行于本地的 AI 智能文章创作工具。它深度集成 Google Gemini API，支持批量生成、自动配图、风格自定义，并能一键输出高质量的 Word 文档。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)](https://www.star-history.com/#cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)
-
 ![项目截图](screenshot.png)
 
 ---
@@ -24,6 +22,7 @@
 - [常见问题-faq](#-常见问题-faq)
 - [致谢](#-致谢)
 - [许可证](#-许可证)
+- [Star History](#-star-history)
 - [联系方式](#-联系方式)
 
 ---
@@ -203,6 +202,13 @@ A: 这是因为程序找不到 Pandoc。请前往配置页面，填写正确的 
 本项目基于 MIT 许可证开源。详情请见 `LICENSE` 文件。
 
 ---
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)](https://www.star-history.com/#cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)
+
+---
+
 ## 📞 联系方式
 如有问题或建议，欢迎联系我：
 - 微信: `Y2F0OTk5OXNzcw==`
