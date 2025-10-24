@@ -1,188 +1,152 @@
-# 张飞吃豆芽
+# 张飞吃豆花 · AI 文章生成器
 
-`张飞吃豆芽` 是一个基于 Google Gemini API 的智能文章创作工具，可以根据用户提供的标题或内容自动生成文章，并从 Unsplash 下载配图，最终生成包含图片的 Word 文档。
+> 一站式的多模态写作助手，整合 Gemini 大模型、图片素材管线与文档导出能力，让内容生产更高效。
 
-## 功能特性
+![写作界面预览](screenshot.png)
 
-- **智能文章生成**: 使用 Google Gemini API 根据标题或主题生成高质量文章
-- **自动配图**: 自动提取文章关键词，从 Unsplash 搜索并下载最合适的图片
-- **批量处理**: 支持一次输入多个标题，批量生成文章
-- **模型自选**: 支持选择不同的 Gemini 模型
-- **可配置**: 支持自定义 API Base URL 和密钥
-- **友好界面**: 简洁美观的 Web 界面，操作简单
+## 功能特点
+- **多模型写作**：接入 Google Gemini 文本能力，可自定义默认模型、提示词与话题批量生成策略。
+- **智能配图**：支持 ComfyUI 工作流、Gemini 图像 API、Unsplash/Pexels/Pixabay 以及本地图库、用户上传等多来源自动选图。
+- **任务调度**：内置异步任务执行器，允许限制并发数、失败重试与单话题重试，确保批量写作稳定。
+- **文档导出**：结合 `python-docx` 生成 Word 文档，可搭配 Pandoc 实现更多格式转换。
+- **可视化配置**：提供 `/config` 页面直观管理 API Key、图像风格、目录与工作流设置，一键测试外部服务连通性。
+- **历史归档**：自动整理生成结果至 `output/`，并在 `/history` 页面查看与下载已生成文档。
 
 ## 技术栈
+- **后端**：Flask 3、Flask-CORS、requests
+- **大模型**：`google-generativeai`（文本与图像）、自建 ComfyUI Runtime
+- **文档处理**：python-docx（可选 Pandoc 增强）
+- **前端**：Jinja2 模板、原生 JS/CSS（见 `static/` 与 `templates/`）
 
-- **后端**: Python + Flask
-- **AI 模型**: Google Gemini API
-- **图片服务**: Unsplash API
-- **文档生成**: python-docx
-- **前端**: HTML5 + CSS3 + JavaScript
+## 快速开始
 
-## 安装步骤
+### 1. 准备环境
+- Python 3.10 或更高版本
+- （可选）Pandoc，用于将 Word 转换到 PDF/Markdown 等格式
+- （可选）正在运行的 ComfyUI 服务（默认监听 `http://127.0.0.1:8188`）
 
-### 1. 克隆或下载项目
-
+### 2. 克隆与安装依赖
 ```bash
-cd write
-```
-
-### 2. 安装 Python 依赖
-
-```bash
+git clone <your-repo-url>
+cd zfcdy
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. 配置 API 密钥
+Windows 用户也可以直接双击 `start.bat`，脚本会自动安装依赖并启动服务。
 
-项目运行后，在 Web 界面中点击"显示/隐藏配置"按钮，输入以下信息：
+### 3. 初始化配置
+1. 复制模板：`cp config.example.json config.json`（Windows 可使用 `copy`）
+2. 根据自身需求填写以下信息：
+   - Gemini 文本写作：`gemini_api_key`、`default_model`、`default_prompt`
+   - 图片来源：Unsplash/Pexels/Pixabay API Key、`image_source_priority` 顺序
+   - 本地图片：在 `local_image_directories` 中声明路径与标签
+   - ComfyUI：补充 `server_url`、`workflow_path` 等参数
+   - Gemini 图像：在 `gemini_image_settings` 中开启并填写独立密钥
+3. 如需启用 Word => 其他格式转换，请配置 `pandoc_path`
 
-- **Gemini API Key**: (必需) 从 [Google AI Studio](https://makersuite.google.com/app/apikey) 获取
-- **Gemini Base URL**: (可选) 默认为 `https://generativelanguage.googleapis.com`
-- **Unsplash Access Key**: (可选) 从 [Unsplash Developers](https://unsplash.com/developers) 获取，用于下载文章配图
-
-配置也可以手动创建 `config.json` 文件：
-
-```json
-{
-  "gemini_api_key": "YOUR_GEMINI_API_KEY",
-  "gemini_base_url": "https://generativelanguage.googleapis.com",
-  "unsplash_access_key": "YOUR_UNSPLASH_ACCESS_KEY",
-  "default_model": "gemini-pro"
-}
-```
-
-## 使用方法
-
-### 1. 启动服务
-
+### 4. 启动应用
 ```bash
 python app.py
 ```
+服务会自动在 5000-5009 端口范围内寻找可用端口，并输出访问地址，例如 `http://localhost:5000`。
 
-服务将在 `http://localhost:5000` 启动。
+也可以使用 `flask --app app.py run` 等传统方式启动（注意保持同样的环境变量与工作目录）。
 
-### 2. 打开浏览器
+## 配置说明
 
-访问 `http://localhost:5000`
+### 核心字段
+| 字段 | 说明 |
+| ---- | ---- |
+| `gemini_api_key` | Google AI Studio 生成的 API Key，用于文本写作 |
+| `gemini_base_url` | Gemini API 基础地址，默认 `https://generativelanguage.googleapis.com` |
+| `default_model` | 默认写作模型（如 `gemini-pro`、`gemini-1.5-flash`） |
+| `default_prompt` | 全局提示词模版，可在写作页针对话题再补充细节 |
+| `max_concurrent_tasks` | 写作任务并发数，建议依据账号配额谨慎设置 |
+| `pandoc_path` | Pandoc 可执行文件路径，留空则跳过格式转换 |
 
-### 3. 配置 API
+### 图片来源与目录
+- `image_source_priority`：决定配图时的查找顺序，支持值包括 `user_uploaded`、`comfyui`、`gemini_image`、`pexels`、`unsplash`、`pixabay`、`local`
+- `local_image_directories`：本地图库列表，每项包含 `path` 与标签数组 `tags`，用于分类检索
+- `enable_user_upload`、`uploaded_images_dir`：是否允许前端上传图片以及存储目录
+- `output_directory`：生成文章的导出目录
 
-首次使用时，点击"显示/隐藏配置"按钮：
-- 输入 Gemini API Key（必需）
-- 输入 Unsplash Access Key（可选，不配置则不会添加图片）
-- 选择要使用的模型（可点击"刷新模型列表"获取可用模型）
-- 点击"保存配置"
+### ComfyUI 设置（`comfyui_settings`）
+| 字段 | 说明 |
+| ---- | ---- |
+| `enabled` | 是否启用 ComfyUI 生成配图 |
+| `server_url` | ComfyUI API 地址（默认为本地 8188 端口） |
+| `workflow_path` | 工作流 JSON 路径，可使用项目内 `workflow/` 示例 |
+| `queue_size` / `timeout_seconds` / `max_attempts` | 控制任务队列、等待时间和重试次数 |
+| `seed` | 默认随机种子，`-1` 表示完全随机 |
 
-### 4. 生成文章
+### Gemini 图像生成（`gemini_image_settings`）
+| 字段 | 说明 |
+| ---- | ---- |
+| `enabled` | 开启后，可调用 Gemini 生成图片 |
+| `api_key` / `base_url` | 可与文本写作共用或独立配置 |
+| `model` | 推荐使用最新的 `gemini-2.5-flash-image-preview` 等模型 |
+| `style` / `custom_prefix` / `custom_suffix` | 控制提示词风格，亦可在前端选择预设 |
+| `aspect_ratio` | 输出图像比例（如 `16:9`、`1:1`） |
+| `max_retries` / `timeout` | 调用时的容错设置 |
 
-- 在"文章标题/主题"输入框中输入一个或多个标题（每行一个）
-- 点击"开始生成"
-- 等待生成完成
-- 点击"下载 Word 文档"获取生成的文章
-
-## 项目结构
-
+## 目录结构
 ```
-write/
-├── app.py                 # Flask 应用主文件
-├── requirements.txt       # Python 依赖
-├── config.example.json    # 配置文件示例
-├── config.json           # 实际配置文件（需自己创建）
-├── .gitignore            # Git 忽略文件
-├── README.md             # 项目说明文档
-├── static/               # 静态资源
-│   ├── style.css        # 样式文件
-│   └── script.js        # JavaScript 文件
-├── templates/            # HTML 模板
-│   └── index.html       # 主页面
-└── output/               # 生成的文档输出目录
-```
-
-## API 接口
-
-### 获取配置
-
-```
-GET /api/config
-```
-
-### 保存配置
-
-```
-POST /api/config
-Content-Type: application/json
-
-{
-  "gemini_api_key": "YOUR_KEY",
-  "gemini_base_url": "https://generativelanguage.googleapis.com",
-  "unsplash_access_key": "YOUR_KEY",
-  "default_model": "gemini-pro"
-}
+├─app/
+│ ├─api/             # 配置与写作相关 REST API
+│ ├─config/          # 配置加载、默认值与模板
+│ ├─models/          # 数据结构定义（如任务、话题对象）
+│ ├─services/        # Gemini、ComfyUI、图像与文档等业务逻辑
+│ ├─utils/           # 文件、网络、缓存工具函数
+│ └─views/           # 页面路由（写作页、配置页、历史页）
+├─static/            # 前端静态资源（JS/CSS）
+├─templates/         # Jinja2 模板（主界面、组件、配置页面）
+├─uploads/           # 用户上传或下载的临时图片
+├─output/            # 生成的文章与文档
+├─workflow/          # ComfyUI 工作流示例
+├─config.example.json
+├─requirements.txt
+└─app.py             # 程序入口，负责端口探测与 Flask 启动
 ```
 
-### 获取模型列表
+## 典型工作流程
+1. 在 `/config` 页面填写 Gemini、图片服务与 ComfyUI 相关配置，并通过内置测试按钮验证连通性。
+2. 切换到 `/` 写作页面，输入或批量导入话题，可为每个话题选择图片来源或上传封面。
+3. 点击「开始写作」后，任务将进入后台执行：生成文章 → 可选摘要 → 按优先级获取或生成配图 → 生成 Word 文档。
+4. 在 `output/` 目录或 `/history` 页面查看结果，可下载或重新触发失败话题。
 
-```
-GET /api/models
-```
+## 常用命令
+- 启动服务（开发模式）：`python app.py`
+- 查看已生成的文档：访问 `/history` 或直接在 `output/` 打开
+- 清理上传缓存：删除 `uploads/` 目录中的旧文件
 
-### 生成文章
+## 故障排查
+- **Gemini 调用失败**：确认 `gemini_api_key` 是否有效、是否开启了相应模型的使用权限。
+- **图片服务不可达**：使用配置页的「测试连接」按钮，检查网络代理或 API Key 限额。
+- **ComfyUI 请求超时**：调小 `comfyui_image_count`、增大 `timeout_seconds`，或保证 ComfyUI 队列空闲。
+- **Pandoc 未工作**：确保已安装 Pandoc 并将执行路径填入 `pandoc_path`。
 
-```
-POST /api/generate
-Content-Type: application/json
+## 贡献与反馈
+欢迎提交 Issue 或 Pull Request 以改进功能与体验。请在提交前确保：
+- 已使用 `pip install -r requirements.txt` 安装依赖并通过基本功能测试
+- 对新增配置、接口或前端交互补充必要的文档说明
 
-{
-  "topics": ["文章标题1", "文章标题2"],
-  "model": "gemini-pro"
-}
-```
+## 📄 许可证
+本项目基于 MIT 许可证开源。详情请见 `LICENSE` 文件。
 
-### 下载文件
+---
 
-```
-GET /api/download/<filename>
-```
+## 🌟 Star History
 
-## 注意事项
+[![Star History Chart](https://api.star-history.com/svg?repos=cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)](https://www.star-history.com/#cat9999aaa/zhangfei-eat-douya&type=date&legend=top-left)
 
-1. **API 配额**: Gemini API 和 Unsplash API 都有使用限制，请注意查看各自的配额政策
-2. **文件保存**: 生成的 Word 文档保存在 `output` 目录中
-3. **中文支持**: 文章生成默认使用中文，Word 文档支持中文
-4. **图片可选**: 如果不配置 Unsplash Key，系统仍然会生成文章，只是没有配图
-5. **网络要求**: 需要能够访问 Google API 和 Unsplash API
+---
 
-## 常见问题
+## 📞 联系方式
+如有问题或建议，欢迎联系我：
+- 微信: `Y2F0OTk5OXNzcw==`
 
-### Q: 无法访问 Gemini API？
-A: 请检查网络连接，确保可以访问 Google 服务。也可以尝试配置代理或使用自定义 Base URL。
-
-### Q: 生成的文章质量不满意？
-A: 可以尝试：
-- 更详细地描述标题/主题
-- 更换不同的 Gemini 模型
-- 在标题中添加更多上下文信息
-
-### Q: 找不到合适的配图？
-A: 系统会自动提取文章关键词搜索图片。如果没有配置 Unsplash Key，将不会添加图片，但仍会生成文章。
-
-### Q: 如何获取 API Key？
-A:
-- Gemini API: https://makersuite.google.com/app/apikey
-- Unsplash API: https://unsplash.com/developers (注册开发者账号)
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 致谢
-
-- [Google Gemini](https://deepmind.google/technologies/gemini/) - AI 模型支持
-- [Unsplash](https://unsplash.com/) - 高质量图片资源
-- [Flask](https://flask.palletsprojects.com/) - Web 框架
-- [python-docx](https://python-docx.readthedocs.io/) - Word 文档生成
