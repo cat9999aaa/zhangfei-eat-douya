@@ -429,6 +429,21 @@ footer {
     background: #d32f2f;
 }
 
+.topic-input-wrapper .clear-input-btn {
+    padding: 8px 12px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.topic-input-wrapper .clear-input-btn:hover {
+    background: #f57c00;
+}
+
 #topicsContainer {
     margin-bottom: 15px;
 }
@@ -457,4 +472,39 @@ footer {
     background: #e3f2fd;
     color: #1565c0;
     border: 1px solid #2196f3;
+}
+
+/* 任务完成汇总动画 */
+.slide-in-up {
+    animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 汇总信息滚动条样式 */
+.completion-summary div::-webkit-scrollbar {
+    width: 8px;
+}
+
+.completion-summary div::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.completion-summary div::-webkit-scrollbar-thumb {
+    background: rgba(76, 175, 80, 0.5);
+    border-radius: 4px;
+}
+
+.completion-summary div::-webkit-scrollbar-thumb:hover {
+    background: rgba(76, 175, 80, 0.7);
 }
