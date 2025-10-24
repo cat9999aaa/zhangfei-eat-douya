@@ -209,6 +209,7 @@ def get_gemini_image_model_list():
         if cache_data['models']:
             print(f"✓ 从缓存加载 Gemini 图像模型列表 (上次更新: {cache_data['last_updated']})")
             return jsonify({
+                'success': True,
                 'models': cache_data['models'],
                 'from_cache': True,
                 'last_updated': cache_data['last_updated']
@@ -224,7 +225,11 @@ def get_gemini_image_model_list():
 
     # 如果没有配置，返回提示
     if not api_key or not base_url:
-        return jsonify({'error': '请先配置 Gemini 图像生成的 API Key 和 Base URL'}), 400
+        return jsonify({
+            'success': False,
+            'error': '请先配置 Gemini 图像生成的 API Key 和 Base URL',
+            'models': []
+        })
 
     try:
         print(f"🔄 从 API 获取 Gemini 图像模型列表...")
@@ -235,11 +240,16 @@ def get_gemini_image_model_list():
         print(f"✓ Gemini 图像模型列表已缓存 ({len(models)} 个模型)")
 
         return jsonify({
+            'success': True,
             'models': models,
             'from_cache': False
         })
     except Exception as e:
-        return jsonify({'error': f'获取模型列表失败: {str(e)}'}), 500
+        return jsonify({
+            'success': False,
+            'error': f'获取模型列表失败: {str(e)}',
+            'models': []
+        })
 
 
 @config_api_bp.route('/test-gemini-image', methods=['POST'])
@@ -258,7 +268,7 @@ def test_gemini_image():
         # 尝试使用 Gemini 图像专用的 API key，如果没有则使用通用的
         api_key = gemini_image_settings.get('api_key')
         if not api_key:
-            return jsonify({'success': False, 'message': '请先配置 Gemini API Key'}), 400
+            return jsonify({'success': False, 'message': '请先配置 Gemini API Key'})
 
     if not base_url:
         # 尝试使用 Gemini 图像专用的 Base URL，如果没有则使用通用的
@@ -279,12 +289,12 @@ def test_gemini_image():
             return jsonify({
                 'success': False,
                 'message': message
-            }), 400
+            })
     except Exception as e:
         return jsonify({
             'success': False,
             'message': f'测试失败: {str(e)}'
-        }), 500
+        })
 
 
 @config_api_bp.route('/gemini-image-styles', methods=['GET'])

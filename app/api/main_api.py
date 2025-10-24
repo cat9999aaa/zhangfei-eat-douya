@@ -178,15 +178,56 @@ def get_history():
         return jsonify({'error': str(e)}), 500
 
 
-@main_api_bp.route('/download/<filename>')
+@main_api_bp.route('/download/<path:filename>')
 def download_file(filename):
-    """下载生成的文档"""
-    config = load_config()
-    output_dir = config.get('output_directory', 'output')
-    filepath = os.path.join(output_dir, filename)
-    if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True)
-    return jsonify({'error': '文件不存在'}), 404
+    """下载生成的文档
+
+    使用 path:filename 来支持包含斜杠的文件名
+    Flask 会自动解码 URL 编码的参数
+    """
+    try:
+        config = load_config()
+        output_dir = config.get('output_directory', 'output')
+
+        # 如果不是绝对路径，相对于当前工作目录（项目根目录）
+        if not os.path.isabs(output_dir):
+            output_dir = os.path.abspath(output_dir)
+
+        # 构建完整的文件路径
+        filepath = os.path.join(output_dir, filename)
+        filepath = os.path.abspath(filepath)
+
+        # 安全检查：确保文件路径在输出目录内（防止路径遍历攻击）
+        if not filepath.startswith(output_dir + os.sep):
+            print(f"安全检查失败: {filepath} 不在 {output_dir} 内")
+            return jsonify({'error': '非法的文件路径'}), 403
+
+        # 调试日志
+        print(f"下载请求 - 文件名: {filename}")
+        print(f"输出目录: {output_dir}")
+        print(f"完整路径: {filepath}")
+        print(f"文件存在: {os.path.exists(filepath)}")
+
+        # 检查文件是否存在
+        if os.path.exists(filepath):
+            return send_file(filepath, as_attachment=True, download_name=filename)
+
+        # 如果文件不存在，列出目录内容帮助调试
+        if os.path.exists(output_dir):
+            files = os.listdir(output_dir)
+            print(f"输出目录内容 ({len(files)} 个文件):")
+            for f in files:
+                print(f"  - {f}")
+        else:
+            print(f"输出目录不存在: {output_dir}")
+
+        return jsonify({'error': '文件不存在'}), 404
+
+    except Exception as e:
+        print(f"下载文件时出错: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'下载失败: {str(e)}'}), 500
 
 
 # ====================

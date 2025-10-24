@@ -98,6 +98,9 @@ class TaskManager {
                 this.updateProgress(100, '全部任务已完成！');
                 this.setGenerateButtonState(false, '开始生成');
                 this.stateManager.clearTaskProgress();
+
+                // 显示完成汇总信息
+                this.showCompletionSummary(task);
                 toast.success('所有文章生成完成！');
             }
         } catch (error) {
@@ -139,6 +142,7 @@ class TaskManager {
                 this.showResults();
                 this.updateUI(task);
                 this.updateProgress(100, '全部任务已完成！');
+                this.showCompletionSummary(task);  // 显示汇总信息
                 this.stateManager.clearTaskProgress();
             }
         } catch (error) {
@@ -146,6 +150,72 @@ class TaskManager {
             this.stateManager.clearTaskProgress();
             console.error('恢复任务进度失败:', error);
         }
+    }
+
+    /**
+     * 显示任务完成汇总
+     */
+    showCompletionSummary(task) {
+        const successCount = task.results.length;
+        const failCount = task.errors.length;
+        const totalCount = task.total;
+
+        // 创建汇总信息容器
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'completion-summary slide-in-up';
+        summaryDiv.style.cssText = `
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #4caf50;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+        `;
+
+        // 构建汇总内容
+        let summaryHTML = `
+            <div style="text-align: center; margin-bottom: 15px;">
+                <h3 style="margin: 0 0 10px 0; color: #2e7d32; font-size: 1.3em;">
+                    🎉 任务完成！
+                </h3>
+                <div style="font-size: 1.1em; color: #1b5e20; font-weight: 600;">
+                    总结果: <span style="color: #4caf50;">${successCount} 成功</span>,
+                    <span style="color: ${failCount > 0 ? '#f44336' : '#666'}">${failCount} 失败</span>
+                </div>
+            </div>
+        `;
+
+        // 如果有成功的文章，显示列表
+        if (successCount > 0) {
+            summaryHTML += `
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #a5d6a7;">
+                    <div style="font-weight: 600; color: #2e7d32; margin-bottom: 10px;">
+                        ✓ 已生成的文章：
+                    </div>
+                    <div style="max-height: 200px; overflow-y: auto; padding: 5px;">
+            `;
+
+            task.results.forEach((result, index) => {
+                summaryHTML += `
+                    <div style="padding: 5px 10px; margin: 3px 0; background: rgba(255,255,255,0.6); border-radius: 6px; font-size: 0.95em;">
+                        ${index + 1}. ${result.article_title || result.topic}
+                    </div>
+                `;
+            });
+
+            summaryHTML += `
+                    </div>
+                </div>
+            `;
+        }
+
+        summaryDiv.innerHTML = summaryHTML;
+        this.resultsList.appendChild(summaryDiv);
+
+        // 平滑滚动到汇总信息
+        setTimeout(() => {
+            Utils.scrollToElement(summaryDiv);
+        }, 100);
     }
 
     /**
@@ -195,9 +265,11 @@ class TaskManager {
     createSuccessItem(result) {
         const item = document.createElement('div');
         item.className = 'result-item success slide-in-left';
+        // 对文件名进行URL编码，确保特殊字符能正确传递
+        const encodedFilename = encodeURIComponent(result.filename);
         item.innerHTML = `
             <div class="result-title">✓ ${result.article_title}</div>
-            <a href="/api/download/${result.filename}" class="download-btn" download>
+            <a href="/api/download/${encodedFilename}" class="download-btn" download>
                 📥 下载 Word 文档
             </a>
         `;

@@ -91,7 +91,8 @@ class ConfigPageApp {
             // 从缓存加载模型列表（不强制刷新）
             const data = await api.getGeminiImageModels(false);
 
-            if (data.models && data.models.length > 0) {
+            // 检查是否成功且有模型数据
+            if (data.success !== false && data.models && data.models.length > 0) {
                 // 有缓存数据，加载完整的模型列表
                 modelSelect.innerHTML = '';
                 data.models.forEach(model => {
@@ -123,7 +124,7 @@ class ConfigPageApp {
                     console.log(`✓ Gemini 图像模型已加载 (${data.models.length} 个模型)`);
                 }
             } else {
-                // 没有缓存，只添加当前模型
+                // 没有缓存或加载失败，只添加当前模型
                 modelSelect.innerHTML = '';
                 const option = document.createElement('option');
                 option.value = currentModel;
@@ -229,9 +230,11 @@ class ConfigPageApp {
             return;
         }
 
+        // 禁用按钮
+        btn.disabled = true;
+        btn.textContent = '加载中...';
+
         try {
-            btn.disabled = true;
-            btn.textContent = '加载中...';
             resultDiv.style.display = 'none';
 
             // 保存当前选中的模型
@@ -239,6 +242,11 @@ class ConfigPageApp {
 
             // 强制刷新，从 API 获取最新的模型列表
             const data = await api.getGeminiImageModels(true);
+
+            // 检查返回是否成功
+            if (data.success === false || data.error) {
+                throw new Error(data.error || '获取模型列表失败');
+            }
 
             // 更新模型下拉列表
             modelSelect.innerHTML = '';
@@ -275,11 +283,13 @@ class ConfigPageApp {
 
             toast.success('模型列表加载成功');
         } catch (error) {
+            console.error('加载 Gemini 图像模型列表错误:', error);
             resultDiv.className = 'test-result test-error';
             resultDiv.textContent = `✗ 加载失败: ${error.message || error}`;
             resultDiv.style.display = 'block';
             toast.error('加载模型列表失败');
         } finally {
+            // 确保按钮状态恢复
             btn.disabled = false;
             btn.textContent = originalText;
         }
@@ -321,9 +331,11 @@ class ConfigPageApp {
             return;
         }
 
+        // 禁用按钮
+        btn.disabled = true;
+        btn.textContent = '测试中...';
+
         try {
-            btn.disabled = true;
-            btn.textContent = '测试中...';
             resultDiv.style.display = 'none';
 
             const data = await api.testGeminiImage(apiKey, baseUrl, model);
@@ -340,11 +352,13 @@ class ConfigPageApp {
 
             resultDiv.style.display = 'block';
         } catch (error) {
+            console.error('测试 Gemini 图像生成 API 错误:', error);
             resultDiv.className = 'test-result test-error';
             resultDiv.textContent = `✗ 测试失败: ${error.message || error}`;
             resultDiv.style.display = 'block';
             toast.error('API 测试失败');
         } finally {
+            // 确保按钮状态恢复
             btn.disabled = false;
             btn.textContent = originalText;
         }

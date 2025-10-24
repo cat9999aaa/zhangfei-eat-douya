@@ -54,6 +54,8 @@ class HistoryManager {
         item.style.animationDelay = `${index * 0.05}s`;
 
         const sizeFormatted = Utils.formatFileSize(file.size);
+        // 对文件名进行URL编码，确保特殊字符能正确传递
+        const encodedFilename = encodeURIComponent(file.filename);
 
         item.innerHTML = `
             <div class="history-item-header">
@@ -67,7 +69,7 @@ class HistoryManager {
                 <span class="info-label">大小:</span> ${sizeFormatted}
             </div>
             <div class="history-item-actions">
-                <a href="/api/download/${file.filename}" class="download-btn btn btn-primary btn-small" download>
+                <a href="/api/download/${encodedFilename}" class="download-btn btn btn-primary btn-small" download>
                     📥 下载
                 </a>
                 <button class="copy-filename-btn btn btn-secondary btn-small" data-filename="${file.filename}">

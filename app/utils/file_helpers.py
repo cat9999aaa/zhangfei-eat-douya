@@ -21,8 +21,24 @@ def generate_safe_filename(original_filename, prefix=''):
 
 
 def sanitize_title(title, max_length=50):
-    """清理文件名中的非法字符"""
-    safe_title = re.sub(r'[\\/*?:"<>|]', '', title)[:max_length]
+    """清理文件名中的非法字符
+
+    移除Windows和Unix系统中的非法字符，以及可能导致问题的特殊字符
+    """
+    # 移除Windows非法字符: \ / : * ? " < > |
+    # 同时移除中文引号和其他可能导致问题的字符
+    safe_title = re.sub(r'[\\/*?:"<>|""'']', '', title)
+
+    # 移除前后空格
+    safe_title = safe_title.strip()
+
+    # 限制长度
+    safe_title = safe_title[:max_length]
+
+    # 如果清理后为空，使用默认名称
+    if not safe_title:
+        safe_title = 'untitled'
+
     return safe_title
 
 
