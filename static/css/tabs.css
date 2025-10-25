@@ -1,0 +1,365 @@
+/**
+ * Tab 标签页样式
+ * 用于配置页面的功能分组
+ */
+
+/* Tab 容器 */
+.tabs-container {
+    margin-bottom: var(--spacing-large);
+}
+
+/* Tab 导航栏 */
+.tabs-nav {
+    display: flex;
+    gap: var(--spacing-small);
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: var(--spacing-large);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tabs-nav::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabs-nav::-webkit-scrollbar-track {
+    background: var(--bg-light);
+}
+
+.tabs-nav::-webkit-scrollbar-thumb {
+    background: var(--gray-400);
+    border-radius: var(--border-radius-small);
+}
+
+/* Tab 按钮 */
+.tab-button {
+    position: relative;
+    padding: var(--spacing-medium) var(--spacing-large);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-base);
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-button:hover {
+    color: var(--primary-color);
+    background: var(--bg-light);
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-button .tab-icon {
+    margin-right: var(--spacing-small);
+    font-size: 18px;
+}
+
+/* Tab 内容区 */
+.tabs-content {
+    animation: fadeIn var(--transition-base);
+}
+
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* 配置卡片 */
+.config-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-large);
+    margin-bottom: var(--spacing-large);
+    box-shadow: var(--shadow-small);
+    transition: var(--transition-base);
+}
+
+.config-card:hover {
+    box-shadow: var(--shadow-medium);
+}
+
+.config-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-medium);
+    margin-bottom: var(--spacing-large);
+    padding-bottom: var(--spacing-medium);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.config-card-icon {
+    font-size: 24px;
+}
+
+.config-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.config-card-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: var(--spacing-small) 0 0 0;
+}
+
+.config-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-large);
+}
+
+/* 配置项 */
+.config-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-small);
+}
+
+.config-item-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-small);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.config-item-label .icon {
+    font-size: 16px;
+    color: var(--primary-color);
+}
+
+.config-item-input {
+    display: flex;
+    gap: var(--spacing-small);
+    align-items: center;
+}
+
+.config-item-input input[type="text"],
+.config-item-input input[type="password"],
+.config-item-input input[type="number"],
+.config-item-input select,
+.config-item-input textarea {
+    flex: 1;
+}
+
+.config-item-help {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: var(--spacing-xsmall);
+}
+
+.config-item-help a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.config-item-help a:hover {
+    text-decoration: underline;
+}
+
+/* 测试结果区域 */
+.test-result {
+    margin-top: var(--spacing-medium);
+    padding: var(--spacing-medium);
+    border-radius: var(--border-radius-small);
+    font-size: 14px;
+    display: none;
+    animation: slideInDown 0.3s ease;
+}
+
+.test-result.info {
+    background: var(--info-light);
+    color: var(--info-color);
+    border-left: 4px solid var(--info-color);
+}
+
+.test-result.success {
+    background: var(--success-light);
+    color: var(--success-color);
+    border-left: 4px solid var(--success-color);
+}
+
+.test-result.error {
+    background: var(--error-light);
+    color: var(--error-color);
+    border-left: 4px solid var(--error-color);
+}
+
+.test-result.warning {
+    background: var(--warning-light);
+    color: var(--warning-color);
+    border-left: 4px solid var(--warning-color);
+}
+
+/* 切换开关 */
+.toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-medium);
+}
+
+.toggle-switch input[type="checkbox"] {
+    position: relative;
+    width: 48px;
+    height: 24px;
+    appearance: none;
+    background: var(--gray-300);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.toggle-switch input[type="checkbox"]:checked {
+    background: var(--success-color);
+}
+
+.toggle-switch input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: var(--transition-base);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input[type="checkbox"]:checked::before {
+    transform: translateX(24px);
+}
+
+.toggle-switch label {
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+/* 信息提示框 */
+.info-box {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-left: 4px solid var(--info-color);
+    padding: var(--spacing-medium);
+    border-radius: var(--border-radius-small);
+    margin-bottom: var(--spacing-large);
+}
+
+.info-box .info-icon {
+    font-size: 20px;
+    color: var(--info-color);
+    margin-right: var(--spacing-small);
+}
+
+.info-box p {
+    margin: var(--spacing-xsmall) 0;
+    color: var(--text-primary);
+}
+
+/* 密码显示/隐藏按钮 */
+.password-toggle {
+    position: relative;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px;
+    font-size: 18px;
+}
+
+.password-toggle-btn:hover {
+    color: var(--primary-color);
+}
+
+/* 拖拽列表 */
+.draggable-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.draggable-list li {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    padding: var(--spacing-medium);
+    margin-bottom: var(--spacing-small);
+    cursor: move;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-medium);
+}
+
+.draggable-list li:hover {
+    background: var(--bg-light);
+    border-color: var(--primary-color);
+}
+
+.draggable-list li .drag-handle {
+    font-size: 20px;
+    color: var(--text-secondary);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .tabs-nav {
+        gap: 0;
+    }
+
+    .tab-button {
+        padding: var(--spacing-small) var(--spacing-medium);
+        font-size: 14px;
+    }
+
+    .tab-button .tab-icon {
+        margin-right: var(--spacing-xsmall);
+        font-size: 16px;
+    }
+
+    .config-card {
+        padding: var(--spacing-medium);
+    }
+
+    .config-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* 加载状态 */
+.config-loading {
+    text-align: center;
+    padding: var(--spacing-xxlarge);
+    color: var(--text-secondary);
+}
+
+.config-loading .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--spacing-medium);
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}

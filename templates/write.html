@@ -36,7 +36,17 @@
 
         <!-- 结果显示 -->
         <div id="resultsArea" class="results-area" style="display: none;">
-            <h3>生成结果</h3>
+            <div class="results-header">
+                <h3>生成结果</h3>
+                <div id="batchActions" class="batch-actions" style="display: none;">
+                    <button id="retryAllBtn" class="btn btn-secondary btn-small">
+                        🔄 重试全部失败项
+                    </button>
+                    <button id="discardAllBtn" class="btn btn-secondary btn-small">
+                        ✕ 放弃全部失败项
+                    </button>
+                </div>
+            </div>
             <div id="resultsList"></div>
         </div>
     </div>
@@ -300,10 +310,36 @@
     border-radius: 50%;
     margin-left: 5px;
 }
+
+/* 结果区域头部 */
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.results-header h3 {
+    margin: 0;
+}
+
+.batch-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.batch-actions .btn {
+    font-size: 13px;
+}
 </style>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='write.js') }}"></script>
+<!-- 写作页面模块 -->
+<script src="{{ url_for('static', filename='js/pages/write/state-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/write/topic-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/write/task-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/write/image-modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/write/main.js') }}"></script>
 {% endblock %}

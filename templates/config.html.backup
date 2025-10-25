@@ -1,0 +1,273 @@
+{% extends "layout.html" %}
+
+{% block title %}配置 - AI 文章生成器{% endblock %}
+
+{% block content %}
+<div class="config-page">
+    <h1>系统配置</h1>
+
+    <div class="config-section">
+        <h2>Gemini API 配置</h2>
+        <div class="form-group">
+            <label for="geminiApiKey">Gemini API Key:</label>
+            <input type="password" id="geminiApiKey" placeholder="请输入您的 Gemini API Key">
+            <p class="help-text">获取地址: <a href="https://makersuite.google.com/app/apikey" target="_blank">https://makersuite.google.com/app/apikey</a></p>
+        </div>
+
+        <div class="form-group">
+            <label for="geminiBaseUrl">Gemini Base URL:</label>
+            <input type="text" id="geminiBaseUrl" value="https://generativelanguage.googleapis.com" placeholder="API Base URL">
+            <p class="help-text">使用自定义代理时修改此项</p>
+        </div>
+
+        <div class="form-group">
+            <label for="defaultModel">默认模型:</label>
+            <select id="defaultModel">
+                <option value="gemini-pro">gemini-pro</option>
+            </select>
+            <button id="testDefaultModel" class="btn btn-secondary btn-small" type="button">测试主模型</button>
+            <div id="defaultModelTestResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="maxConcurrentTasks">同时生成文章数量:</label>
+            <input type="number" id="maxConcurrentTasks" value="3" min="1" max="10">
+            <p class="help-text">设置同时请求 API 的线程数，建议不要超过5，以免触发 API 频率限制。</p>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>图片 API 配置 (可选)</h2>
+
+        <div class="form-group">
+            <label for="unsplashKey">Unsplash Access Key:</label>
+            <input type="password" id="unsplashKey" placeholder="用于下载文章配图">
+            <p class="help-text">获取地址: <a href="https://unsplash.com/developers" target="_blank">https://unsplash.com/developers</a></p>
+            <button id="testUnsplash" class="btn btn-secondary btn-small" type="button">测试 Unsplash API</button>
+            <div id="unsplashTestResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="pexelsKey">Pexels API Key:</label>
+            <input type="password" id="pexelsKey" placeholder="用于下载文章配图">
+            <p class="help-text">获取地址: <a href="https://www.pexels.com/api/" target="_blank">https://www.pexels.com/api/</a></p>
+            <button id="testPexels" class="btn btn-secondary btn-small" type="button">测试 Pexels API</button>
+            <div id="pexelsTestResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="pixabayKey">Pixabay API Key:</label>
+            <input type="password" id="pixabayKey" placeholder="用于下载文章配图">
+            <p class="help-text">获取地址: <a href="https://pixabay.com/api/docs/" target="_blank">https://pixabay.com/api/docs/</a></p>
+            <button id="testPixabay" class="btn btn-secondary btn-small" type="button">测试 Pixabay API</button>
+            <div id="pixabayTestResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label>图片源优先级:</label>
+            <p class="help-text">拖拽排序，程序将按顺序尝试获取图片，如果前一个失败则尝试下一个</p>
+            <ul id="imagePriorityList" class="sortable-list">
+                <li data-source="comfyui">ComfyUI 自动生成</li>
+                <li data-source="user_uploaded">用户上传</li>
+                <li data-source="pexels">Pexels</li>
+                <li data-source="unsplash">Unsplash</li>
+                <li data-source="pixabay">Pixabay</li>
+                <li data-source="local">本地图库</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>ComfyUI 图片生成</h2>
+        <div class="form-group">
+            <label class="checkbox-inline">
+                <input type="checkbox" id="comfyuiEnabled" checked>
+                启用 ComfyUI 自动生成图片
+            </label>
+            <p class="help-text">采样器、步数、模型等参数都在 Workflow 内设置，这里只需指定 Workflow 与风格。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiServerUrl">ComfyUI 服务地址:</label>
+            <input type="text" id="comfyuiServerUrl" value="http://127.0.0.1:8188" placeholder="http://127.0.0.1:8188">
+            <p class="help-text">默认监听本地 8188 端口，如使用代理/远程 ComfyUI，请在此修改。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiWorkflowPath">Workflow JSON 路径:</label>
+            <input type="text" id="comfyuiWorkflowPath" placeholder="workflows/comfyui_workflow.json">
+            <p class="help-text">在 ComfyUI 中复制 “API Prompt” 并保存为 JSON 文件后填入，支持相对路径。</p>
+        </div>
+
+        <p class="help-text">图片尺寸也由 workflow 节点控制，如需调整请在 ComfyUI 内修改后重新导出。</p>
+
+        <div class="form-group">
+            <label for="comfyuiImageCount">自动生成图片数量:</label>
+            <select id="comfyuiImageCount">
+                <option value="1">1 张</option>
+                <option value="3">3 张</option>
+            </select>
+            <p class="help-text">适用于系统自动生成/补齐的图片数量；用户手动上传几张就用几张。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiStyleTemplate">图片风格:</label>
+            <select id="comfyuiStyleTemplate"></select>
+            <p class="help-text">选择预设风格或“自定义”后填写下方提示词。</p>
+        </div>
+
+        <div class="form-group custom-style-block">
+            <label for="comfyuiPositiveStyle">默认正向风格提示词:</label>
+            <textarea id="comfyuiPositiveStyle" rows="3" placeholder="例如：realistic, cinematic lighting, detailed photography"></textarea>
+            <p class="help-text">仅当风格选择“自定义”时才生效。</p>
+        </div>
+
+        <div class="form-group custom-style-block">
+            <label for="comfyuiNegativeStyle">默认负向风格提示词:</label>
+            <textarea id="comfyuiNegativeStyle" rows="3" placeholder="例如：cartoon, lowres, watermark"></textarea>
+            <p class="help-text">仅当风格选择“自定义”时才生效。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="comfyuiSummaryModel">图片摘要模型:</label>
+            <select id="comfyuiSummaryModel"></select>
+            <button id="testSummaryModel" class="btn btn-secondary btn-small" type="button">测试摘要模型</button>
+            <div id="summaryModelTestResult" class="test-result" style="display: none;"></div>
+            <p class="help-text">用于生成段落摘要的模型，沿用主写作模型的 API Key。</p>
+        </div>
+
+        <div class="form-group">
+            <button id="testComfyui" class="btn btn-secondary btn-small" type="button">测试 ComfyUI 工作流</button>
+            <div id="comfyuiTestResult" class="test-result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>本地图库配置</h2>
+        <div class="form-group">
+            <label>本地图片目录:</label>
+            <p class="help-text">配置本地图片目录及其标签，系统会根据文章主题匹配相应标签的图片</p>
+            <div id="localImageDirs">
+                <!-- 动态加载 -->
+            </div>
+            <button id="addImageDir" class="btn btn-secondary btn-small" type="button">+ 添加目录</button>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>Pandoc 配置 <span style="color: red;">*必填</span></h2>
+        <div class="form-group">
+            <label for="pandocPath">Pandoc 可执行文件路径: <span style="color: red;">*</span></label>
+            <input type="text" id="pandocPath" placeholder="例如: C:\Program Files\Pandoc\pandoc.exe" required>
+            <p class="help-text">用于将 Markdown 转换为 Word 文档。必须先配置此项才能生成文章。<br>下载地址: <a href="https://pandoc.org/installing.html" target="_blank">https://pandoc.org/installing.html</a></p>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>输出目录配置</h2>
+        <div class="form-group">
+            <label for="outputDirectory">文档输出目录:</label>
+            <input type="text" id="outputDirectory" placeholder="output" value="output">
+            <p class="help-text">生成的 Word 文档将保存在此目录。可以使用相对路径或绝对路径。默认为当前目录下的 output 文件夹。</p>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <h2>写作提示词配置</h2>
+        <div class="form-group">
+            <label for="defaultPrompt">默认写作提示词:</label>
+            <textarea id="defaultPrompt" rows="10" placeholder="设置默认的写作提示词"></textarea>
+            <p class="help-text">使用 {topic} 作为标题的占位符。留空使用系统默认提示词。</p>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button id="saveConfig" class="btn btn-primary btn-large">保存配置</button>
+        <button id="resetConfig" class="btn btn-secondary">重置为默认</button>
+    </div>
+
+    <div id="configStatus" class="status-message" style="display: none;"></div>
+</div>
+
+<style>
+.image-dir-item {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border: 1px solid #e0e0e0;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.form-group-inline > div {
+    flex: 1;
+}
+
+.form-group-inline label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.form-group-inline input {
+    width: 100%;
+}
+
+.remove-dir-btn {
+    flex-shrink: 0;
+}
+
+.sortable-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.sortable-list li {
+    background: #f0f8ff;
+    padding: 10px 15px;
+    margin: 5px 0;
+    border-radius: 6px;
+    border: 2px solid #007bff;
+    cursor: move;
+    user-select: none;
+}
+
+.sortable-list li:hover {
+    background: #e6f3ff;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.checkbox-inline input {
+    margin: 0;
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- 配置页面模块 -->
+<script src="{{ url_for('static', filename='js/pages/config/config-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/api-tester.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/image-directory-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/priority-sorter.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/main.js') }}"></script>
+{% endblock %}
