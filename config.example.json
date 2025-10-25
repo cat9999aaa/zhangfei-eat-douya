@@ -8,21 +8,65 @@
   "default_prompt": "",
   "max_concurrent_tasks": 3,
   "pandoc_path": "",
-  "image_source_priority": ["unsplash", "pexels", "pixabay", "local", "user_uploaded"],
+  "output_directory": "output",
+  "image_source_priority": [
+    "user_uploaded",
+    "comfyui",
+    "gemini_image",
+    "pexels",
+    "unsplash",
+    "pixabay",
+    "local"
+  ],
   "local_image_directories": [
     {
       "path": "pic",
-      "tags": ["default", "general"]
+      "tags": [
+        "default",
+        "general"
+      ]
     },
     {
       "path": "images/nature",
-      "tags": ["nature", "landscape"]
+      "tags": [
+        "nature",
+        "landscape"
+      ]
     },
     {
       "path": "images/tech",
-      "tags": ["technology", "business"]
+      "tags": [
+        "technology",
+        "business"
+      ]
     }
   ],
   "enable_user_upload": true,
-  "uploaded_images_dir": "uploads"
+  "uploaded_images_dir": "uploads",
+  "comfyui_settings": {
+    "enabled": true,
+    "server_url": "http://127.0.0.1:8188",
+    "queue_size": 2,
+    "timeout_seconds": 180,
+    "max_attempts": 2,
+    "seed": -1,
+    "workflow_path": "workflows/example_workflow.json"
+  },
+  "comfyui_image_count": 1,
+  "comfyui_style_template": "custom",
+  "comfyui_positive_style": "",
+  "comfyui_negative_style": "",
+  "comfyui_summary_model": "gemini-pro",
+  "gemini_image_settings": {
+    "enabled": false,
+    "api_key": "",
+    "base_url": "",
+    "model": "gemini-2.5-flash-image-preview",
+    "style": "realistic",
+    "aspect_ratio": "16:9",
+    "custom_prefix": "",
+    "custom_suffix": "",
+    "max_retries": 3,
+    "timeout": 30
+  }
 }

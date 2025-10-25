@@ -1,0 +1,102 @@
+/* CSS 变量 - 全局主题配置 */
+
+:root {
+    /* 主题色彩 */
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-color: #667eea;
+    --primary-dark: #764ba2;
+    --primary-light: #8b9bff;
+
+    /* 功能色 */
+    --success-color: #4caf50;
+    --success-light: #e8f5e9;
+    --error-color: #f44336;
+    --error-light: #ffebee;
+    --warning-color: #ff9800;
+    --warning-light: #fff3cd;
+    --info-color: #2196f3;
+    --info-light: #e3f2fd;
+
+    /* 灰度色 */
+    --text-primary: #333;
+    --text-secondary: #666;
+    --text-tertiary: #888;
+    --bg-white: #ffffff;
+    --bg-light: #f9f9f9;
+    --bg-lighter: #f5f5f5;
+    --border-color: #ddd;
+    --border-light: #e0e0e0;
+
+    /* Gray scale */
+    --gray-100: #f7f7f7;
+    --gray-200: #eeeeee;
+    --gray-300: #dddddd;
+    --gray-400: #cccccc;
+    --gray-500: #999999;
+    --gray-600: #666666;
+    --gray-700: #444444;
+    --gray-800: #333333;
+
+    /* 阴影 */
+    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-large: 0 10px 40px rgba(0, 0, 0, 0.2);
+    --shadow-hover: 0 6px 20px rgba(102, 126, 234, 0.3);
+
+    /* 圆角 */
+    --radius-small: 6px;
+    --radius-medium: 10px;
+    --radius-large: 20px;
+    --radius-full: 50%;
+
+    /* 圆角别名（兼容性） */
+    --border-radius-small: 6px;
+    --border-radius: 10px;
+    --border-radius-large: 20px;
+
+    /* 间距 */
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 20px;
+    --spacing-lg: 30px;
+    --spacing-xl: 40px;
+
+    /* 间距别名（兼容性） */
+    --spacing-xsmall: 8px;
+    --spacing-small: 12px;
+    --spacing-medium: 20px;
+    --spacing-large: 30px;
+    --spacing-xlarge: 40px;
+    --spacing-xxlarge: 60px;
+
+    /* 过渡效果 */
+    --transition-fast: 0.2s ease;
+    --transition-base: 0.3s ease;
+    --transition-slow: 0.5s ease;
+
+    /* 字体 */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.5rem;
+    --font-size-2xl: 2rem;
+    --font-size-3xl: 2.5rem;
+
+    /* Z-index层级 */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-toast: 1060;
+    --z-tooltip: 1070;
+}
+
+/* 暗色模式（预留） */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* 可以在这里添加暗色模式的变量 */
+    }
+}

@@ -1,0 +1,232 @@
+/* 响应式设计 */
+
+/* 平板设备 */
+@media (max-width: 1024px) {
+    :root {
+        --spacing-xl: 30px;
+    }
+
+    .page-container {
+        margin: var(--spacing-md) var(--spacing-md);
+        padding: var(--spacing-lg);
+    }
+
+    .nav-container {
+        padding: var(--spacing-md);
+    }
+}
+
+/* 手机设备 */
+@media (max-width: 768px) {
+    :root {
+        --font-size-3xl: 2rem;
+        --font-size-2xl: 1.75rem;
+        --font-size-xl: 1.25rem;
+        --spacing-xl: 24px;
+        --spacing-lg: 20px;
+    }
+
+    body {
+        font-size: 15px;
+    }
+
+    .container {
+        margin: 0;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    .page-container {
+        margin: var(--spacing-sm);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-medium);
+    }
+
+    .nav-container {
+        padding: var(--spacing-sm) var(--spacing-md);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .nav-menu {
+        width: 100%;
+        flex-direction: row;
+        gap: var(--spacing-sm);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-link {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-sm);
+        white-space: nowrap;
+    }
+
+    .page-title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .main-content {
+        padding: var(--spacing-md);
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .topic-input-wrapper {
+        flex-wrap: wrap;
+    }
+
+    .topic-input-wrapper input {
+        width: 100%;
+        flex: none;
+    }
+
+    .topic-input-wrapper button {
+        flex: 1;
+    }
+
+    .form-control {
+        font-size: 16px; /* 防止iOS自动缩放 */
+    }
+
+    .modal {
+        margin: var(--spacing-sm);
+        max-height: calc(100vh - var(--spacing-md));
+    }
+
+    .toast-container {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+        left: var(--spacing-sm);
+    }
+
+    .toast {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .history-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+
+    .card {
+        padding: var(--spacing-md);
+    }
+
+    footer {
+        padding: var(--spacing-md);
+        margin-top: var(--spacing-md);
+    }
+}
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+    :root {
+        --font-size-3xl: 1.75rem;
+        --font-size-2xl: 1.5rem;
+        --spacing-lg: 16px;
+    }
+
+    .nav-brand {
+        font-size: var(--font-size-lg);
+    }
+
+    .page-container {
+        padding: var(--spacing-sm);
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: var(--spacing-md);
+    }
+}
+
+/* 超宽屏 */
+@media (min-width: 1920px) {
+    .page-container {
+        max-width: 1200px;
+    }
+
+    .container {
+        max-width: 1100px;
+    }
+}
+
+/* 打印样式 */
+@media print {
+    .navbar,
+    footer,
+    .btn,
+    .button-group,
+    .toast-container {
+        display: none !important;
+    }
+
+    .page-container {
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    body {
+        background: white;
+    }
+
+    * {
+        color: black !important;
+        background: white !important;
+    }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .nav-link,
+    button {
+        min-height: 44px; /* iOS推荐的最小触摸目标 */
+        min-width: 44px;
+    }
+
+    .form-control {
+        min-height: 44px;
+    }
+}
+
+/* 暗色模式（预留） */
+@media (prefers-color-scheme: dark) {
+    /* 可以在这里添加暗色模式样式 */
+}
+
+/* 减少动画（用户偏好） */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* 横屏手机 */
+@media (max-height: 600px) and (orientation: landscape) {
+    .page-container {
+        margin: var(--spacing-sm);
+    }
+
+    .modal {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}
