@@ -305,10 +305,5 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- 写作页面模块 -->
-<script src="{{ url_for('static', filename='js/pages/write/state-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/write/topic-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/write/task-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/write/image-modal.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/write/main.js') }}"></script>
+<script src="{{ url_for('static', filename='write.js') }}"></script>
 {% endblock %}
