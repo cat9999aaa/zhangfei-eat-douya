@@ -1,6 +1,12 @@
+# 核心依赖
 flask>=3.0.0
 flask-cors>=4.0.0
 google-generativeai>=0.3.0
 python-docx>=1.1.0
 requests>=2.31.0
 pillow>=10.0.0
+
+# 可选依赖（推荐安装）
+# waitress - 生产级 WSGI 服务器，避免 Windows 上的 socket 错误
+# 如果使用 start_stable.bat 或 app_stable.py，需要安装此依赖
+waitress>=2.1.0

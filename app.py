@@ -30,5 +30,7 @@ if __name__ == '__main__':
     app = create_app()
 
     # 启动应用
-    # 在Windows上禁用threaded模式以避免套接字错误
-    app.run(debug=True, host='0.0.0.0', port=port, threaded=False)
+    # 在Windows上禁用 reloader 和 threaded 以避免套接字错误
+    # use_reloader=False: 禁用自动重载，避免 Windows 上的 socket 问题
+    # threaded=False: 禁用多线程，使用单线程处理请求
+    app.run(debug=True, host='0.0.0.0', port=port, use_reloader=False, threaded=False)

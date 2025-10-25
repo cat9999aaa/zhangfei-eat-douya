@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify
 from app.config.loader import load_config, save_config, get_comfyui_settings, get_gemini_image_settings
 from app.config import IMAGE_STYLE_TEMPLATES
 from app.services import update_comfyui_runtime, get_available_models
-from app.services.task_service import create_executor
+from app.services.task_service import update_executor_workers
 from app.services.gemini_image_service import (
     test_gemini_image_api,
     get_gemini_image_models,
@@ -135,7 +135,7 @@ def handle_config():
             final_config['comfyui_summary_model'] = final_config.get('default_model', 'gemini-pro')
 
         save_config(final_config)
-        create_executor(final_config.get('max_concurrent_tasks', 3))
+        update_executor_workers(final_config.get('max_concurrent_tasks', 3))
         update_comfyui_runtime(final_config)
 
         return jsonify({'success': True, 'message': '配置保存成功'})

@@ -5,7 +5,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from app.config.loader import load_config
-from app.services import initialize_executor, update_comfyui_runtime
+from app.services import update_comfyui_runtime
 
 
 def create_app():
@@ -22,7 +22,6 @@ def create_app():
 
     # 加载配置并初始化服务
     config = load_config()
-    initialize_executor(config)
     update_comfyui_runtime(config)
 
     # 注册 blueprints

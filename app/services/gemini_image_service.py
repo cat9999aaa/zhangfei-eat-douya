@@ -496,6 +496,11 @@ def test_gemini_image_api(api_key, base_url, model):
         tuple: (success: bool, message: str, image_url: str or None)
     """
     try:
+        print("\n" + "="*60)
+        print("🧪 Gemini 图像生成 API 测试")
+        print(f"   模型: {model}")
+        print("="*60 + "\n")
+
         test_prompt = "A beautiful sunset over the ocean"
 
         image_path, metadata = generate_image_with_gemini(
@@ -505,19 +510,28 @@ def test_gemini_image_api(api_key, base_url, model):
             model=model,
             style='realistic',
             aspect_ratio='16:9',  # 测试时使用16:9比例
-            max_retries=3,  # 设置重试次数：第1次尝试imageConfig，失败后降级重试，最多3次
-            timeout=30
+            max_retries=1,  # 测试时只尝试一次，避免重复
+            timeout=60  # 增加超时时间
         )
 
         if image_path:
             # 测试成功，返回成功信息
             aspect_info = metadata.get('aspect_ratio', '未知')
+            print(f"\n✅ 测试成功")
+            print(f"   图片已保存: {image_path}")
+            print(f"   比例: {aspect_info}")
+            print("="*60 + "\n")
             return True, f'Gemini 图像生成 API 工作正常 (比例: {aspect_info})', image_path
         else:
+            print(f"\n❌ 测试失败: 未生成图片")
+            print("="*60 + "\n")
             return False, 'API 测试失败，请检查配置和模型是否支持图像生成', None
 
     except Exception as e:
         error_msg = str(e)
+        print(f"\n❌ 测试异常: {error_msg}")
+        print("="*60 + "\n")
+
         # 提供更详细的错误信息
         if 'INVALID_ARGUMENT' in error_msg:
             return False, f'参数错误: 模型可能不支持图像生成或配置有误\n{error_msg}', None

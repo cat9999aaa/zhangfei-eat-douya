@@ -17,47 +17,25 @@ class TaskManager {
         this.discardAllBtn = document.getElementById('discardAllBtn');
 
         this.statusInterval = null;
-        this.POLL_INTERVAL = 2000; // 2秒轮询一次
-
-        // 跟踪是否已经滚动过（修复自动滚动问题）
+        this.POLL_INTERVAL = 2000;
         this.hasScrolledToResults = false;
-
-        // 跟踪已放弃和正在重试的主题
         this.discardedTopics = new Set();
         this.retryingTopics = new Set();
-
-        // 跟踪重试次数
-        this.retryCount = new Map(); // topic -> count
-
-        // 跟踪上次的结果数量（用于减少日志输出）
-        this.lastResultCount = 0;
-        this.lastErrorCount = 0;
-
-        // 建立topic到原始主题的映射（用于清除重试状态）
-        this.topicMap = new Map(); // topic from API -> original input topic
 
         this.init();
     }
 
     init() {
-        // 事件委托：处理重试和放弃按钮
         this.resultsList.addEventListener('click', (e) => this.handleResultAction(e));
-
-        // 批量操作按钮
-        this.retryAllBtn.addEventListener('click', () => this.handleRetryAll());
-        this.discardAllBtn.addEventListener('click', () => this.handleDiscardAll());
+        if (this.retryAllBtn) this.retryAllBtn.addEventListener('click', () => this.handleRetryAll());
+        if (this.discardAllBtn) this.discardAllBtn.addEventListener('click', () => this.handleDiscardAll());
     }
 
-    /**
-     * 开始生成任务
-     */
     async startGeneration(topics, topicImageMap) {
         if (topics.length === 0) {
             toast.warning('请至少输入一个文章标题或主题！');
             return;
         }
-
-        // 检查 Pandoc 配置
         try {
             const checkData = await api.checkPandoc();
             if (!checkData.pandoc_configured) {
@@ -69,29 +47,12 @@ class TaskManager {
             return;
         }
 
-        // 重置UI和状态
-        this.showProgress();
-        this.resultsList.innerHTML = '';
-        this.updateProgress(0, '正在启动任务...');
-        this.setGenerateButtonState(true, '生成中...');
-
-        // 重置跟踪状态
-        this.hasScrolledToResults = false;
-        this.discardedTopics.clear();
-        this.retryingTopics.clear();
-        this.retryCount.clear();
-        this.lastResultCount = 0;
-        this.lastErrorCount = 0;
-        this.topicMap.clear();
-
-        // 建立初始topic映射
-        topics.forEach(topic => {
-            this.topicMap.set(topic, topic);
-        });
+        this.resetUIState();
+        this.renderInitialPending(topics);
 
         try {
             const data = await api.generateArticles(topics, topicImageMap);
-            this.stateManager.saveTaskProgress(data.task_id);
+            this.stateManager.saveTaskProgress(data.task_id, topics);
             this.startPolling(data.task_id);
             toast.success('任务已启动，开始生成文章...');
         } catch (error) {
@@ -100,22 +61,12 @@ class TaskManager {
         }
     }
 
-    /**
-     * 开始轮询任务状态
-     */
     startPolling(taskId) {
-        // 立即执行一次
-        this.pollStatus(taskId);
-
-        // 设置定时轮询
-        this.statusInterval = setInterval(() => {
-            this.pollStatus(taskId);
-        }, this.POLL_INTERVAL);
+        this.stopPolling();
+        this.pollStatus(taskId); // 立即执行一次
+        this.statusInterval = setInterval(() => this.pollStatus(taskId), this.POLL_INTERVAL);
     }
 
-    /**
-     * 停止轮询
-     */
     stopPolling() {
         if (this.statusInterval) {
             clearInterval(this.statusInterval);
@@ -123,9 +74,6 @@ class TaskManager {
         }
     }
 
-    /**
-     * 轮询任务状态
-     */
     async pollStatus(taskId) {
         try {
             const task = await api.getGenerationStatus(taskId);
@@ -133,397 +81,243 @@ class TaskManager {
 
             if (task.status === 'completed') {
                 this.stopPolling();
-                this.updateProgress(100, '全部任务已完成！');
-                this.setGenerateButtonState(false, '开始生成');
-                this.stateManager.clearTaskProgress();
-                toast.success('所有文章生成完成！');
+                this.finalizeTaskUI(task); // 使用新的最终处理函数
             }
         } catch (error) {
             if (error.status === 404) {
-                // 任务不存在
                 this.stopPolling();
                 this.stateManager.clearTaskProgress();
-                toast.error('任务状态查询失败，任务可能已丢失');
                 this.resetUI();
+                toast.error('任务已失效或在服务器上被清除，请重新开始');
             } else {
                 console.error('轮询状态失败:', error);
             }
         }
     }
 
-    /**
-     * 恢复任务进度
-     */
     async restoreTaskProgress() {
         const savedTask = this.stateManager.getSavedTask();
-
-        if (!savedTask) return;
+        if (!savedTask || !savedTask.taskId) return;
 
         try {
+            // 首先渲染出所有的待处理项
+            const initialTopics = savedTask.topics || [];
+            this.resetUIState();
+            this.renderInitialPending(initialTopics);
+
             const task = await api.getGenerationStatus(savedTask.taskId);
 
+            this.stateManager.currentTaskId = savedTask.taskId;
+            this.updateUI(task); // 使用当前状态更新UI
+
             if (task.status === 'running') {
-                // 任务仍在运行，恢复轮询
-                this.stateManager.currentTaskId = savedTask.taskId;
-                this.showProgress();
-                this.showResults();
-                this.setGenerateButtonState(true, '生成中...');
                 this.startPolling(savedTask.taskId);
-                this.updateUI(task);
                 toast.info('已恢复正在进行的任务');
             } else if (task.status === 'completed') {
-                // 任务已完成，显示结果
-                this.showProgress();
-                this.showResults();
-                this.updateUI(task);
-                this.updateProgress(100, '全部任务已完成！');
-                this.stateManager.clearTaskProgress();
+                this.finalizeTaskUI(task); // 如果任务已完成，执行最终处理
             }
         } catch (error) {
-            // 任务不存在，清除保存的数据
             this.stateManager.clearTaskProgress();
             console.error('恢复任务进度失败:', error);
+            this.resetUI();
         }
     }
 
-    /**
-     * 更新UI
-     */
+
     updateUI(task) {
-        // 过滤掉已放弃的主题
-        const filteredErrors = task.errors.filter(error =>
-            !this.discardedTopics.has(error.topic)
-        );
-
-        // 计算实际完成数（排除正在重试的）
-        // 正在重试的主题不应该计入已完成
-        const retryingErrorCount = filteredErrors.filter(error =>
-            this.retryingTopics.has(error.topic)
-        ).length;
-
-        const actualCompletedCount = task.results.length + filteredErrors.length - retryingErrorCount;
-        const discardedCount = this.discardedTopics.size;
-        const displayTotal = task.total - discardedCount;
-
-        // 前端重新计算进度（避免后端进度不一致）
-        const actualProgress = displayTotal > 0 ? (actualCompletedCount / displayTotal) * 100 : 0;
-
-        // 只在结果数量有变化时输出日志（减少日志刷屏）
-        if (task.results.length !== this.lastResultCount || filteredErrors.length !== this.lastErrorCount) {
-            console.log('更新UI - 任务状态:', {
-                status: task.status,
-                total: task.total,
-                displayTotal: displayTotal,
-                results: task.results.length,
-                errors: filteredErrors.length,
-                retrying: retryingErrorCount,
-                actualCompleted: actualCompletedCount,
-                progress: Math.round(actualProgress) + '%'
-            });
-            this.lastResultCount = task.results.length;
-            this.lastErrorCount = filteredErrors.length;
-        }
-
-        this.updateProgress(
-            actualProgress,
-            `生成中... (${actualCompletedCount}/${displayTotal}) - ${Math.round(actualProgress)}%`
-        );
-
-        // 清空并重新渲染结果列表
-        this.resultsList.innerHTML = '';
-
-        // 渲染成功结果
-        task.results.forEach(result => {
-            const item = this.createSuccessItem(result);
-            this.resultsList.appendChild(item);
-
-            // 清除成功结果的重试状态
-            // 检查所有正在重试的主题，看是否有匹配的
-            for (const retryingTopic of this.retryingTopics) {
-                // 如果result中的topic字段存在且匹配，或者通过映射匹配
-                if (result.topic === retryingTopic ||
-                    this.topicMap.get(result.topic) === retryingTopic) {
-                    this.retryingTopics.delete(retryingTopic);
-                    break;
-                }
+        const newOutcomes = new Set([...task.results.map(r => r.topic), ...task.errors.map(e => e.topic)]);
+        this.retryingTopics.forEach(topic => {
+            if (newOutcomes.has(topic)) {
+                this.retryingTopics.delete(topic);
             }
         });
 
-        // 渲染失败结果
-        const failedNotRetrying = []; // 收集失败且未在重试中的主题
-        filteredErrors.forEach(error => {
-            const isRetrying = this.retryingTopics.has(error.topic);
-            const retryTimes = this.retryCount.get(error.topic) || 0;
-            const item = this.createErrorItem(error, isRetrying, retryTimes);
-            this.resultsList.appendChild(item);
+        const filteredErrors = task.errors.filter(e => !this.discardedTopics.has(e.topic));
+        const completedCount = task.results.length + filteredErrors.length;
+        const totalCount = task.total - this.discardedTopics.size;
+        const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-            if (!isRetrying) {
-                failedNotRetrying.push(error.topic);
-            }
-        });
+        this.updateProgress(progress, `生成中... (${completedCount}/${totalCount})`);
 
-        // 根据失败项数量显示/隐藏批量操作按钮
-        if (failedNotRetrying.length > 1) {
-            this.batchActions.style.display = 'flex';
-        } else {
-            this.batchActions.style.display = 'none';
-        }
+        task.results.forEach(result => this.replacePlaceholder(result.topic, this.createSuccessItem(result)));
+        filteredErrors.forEach(error => this.replacePlaceholder(error.topic, this.createErrorItem(error, this.retryingTopics.has(error.topic))));
 
-        // 显示结果区域，只在第一次时滚动
-        if (task.results.length > 0 || filteredErrors.length > 0) {
+        const canRetryCount = filteredErrors.filter(e => !this.retryingTopics.has(e.topic)).length;
+        if(this.batchActions) this.batchActions.style.display = canRetryCount > 1 ? 'flex' : 'none';
+
+        if ((task.results.length > 0 || filteredErrors.length > 0) && !this.hasScrolledToResults) {
             this.showResults();
-
-            // 只在第一次显示结果时滚动（修复自动滚动问题）
-            if (!this.hasScrolledToResults) {
-                Utils.scrollToElement(this.resultsArea);
-                this.hasScrolledToResults = true;
-            }
+            Utils.scrollToElement(this.resultsArea);
+            this.hasScrolledToResults = true;
         }
     }
 
-    /**
-     * 创建成功结果项
-     */
+    finalizeTaskUI(task) {
+        // --- 前端安全网机制 ---
+        const processedTopics = new Set([...task.results.map(r => r.topic), ...task.errors.map(e => e.topic)]);
+        const pendingItems = this.resultsList.querySelectorAll('.result-item.pending');
+
+        pendingItems.forEach(item => {
+            const topic = item.dataset.topic;
+            if (!processedTopics.has(topic)) {
+                console.warn(`检测到幽灵任务 (UI): ${topic}，强制标记为失败`);
+                const ghostError = { topic: topic, error: '任务状态未知，请重试', retry_count: 0 };
+                this.replacePlaceholder(topic, this.createErrorItem(ghostError, false));
+            }
+        });
+
+        const finalErrors = Array.from(this.resultsList.querySelectorAll('.result-item.error')).length;
+
+        if (finalErrors === 0) {
+            this.updateProgress(100, '全部任务已完成！');
+            this.setGenerateButtonState(false, '开始生成');
+            this.stateManager.clearTaskProgress();
+            toast.success('所有文章生成完成！');
+        } else {
+            this.updateProgress(100, `任务完成，但有 ${finalErrors} 个失败项`);
+            toast.warning(`任务完成，但有 ${finalErrors} 个项目失败，您可以选择重试`);
+            // 保持生成按钮禁用，让用户通过重试/放弃来继续
+            this.setGenerateButtonState(true, '任务已完成');
+        }
+
+        const canRetryCount = this.resultsList.querySelectorAll('.retry-btn').length;
+        if(this.batchActions) this.batchActions.style.display = canRetryCount > 1 ? 'flex' : 'none';
+    }
+
+
+    replacePlaceholder(topic, newItem) {
+        const placeholder = this.resultsList.querySelector(`.result-item[data-topic="${topic}"]`);
+        if (placeholder) {
+            placeholder.replaceWith(newItem);
+        } else {
+            // 如果没有找到占位符（例如在恢复任务时），则直接添加
+            this.resultsList.appendChild(newItem);
+        }
+    }
+
     createSuccessItem(result) {
         const item = document.createElement('div');
         item.className = 'result-item success slide-in-left';
+        item.dataset.topic = result.topic;
         item.innerHTML = `
             <div class="result-title">✓ ${result.article_title}</div>
-            <a href="/api/download/${result.filename}" class="download-btn" download>
-                📥 下载 Word 文档
-            </a>
+            <a href="/api/download/${result.filename}" class="download-btn" download>📥 下载 Word 文档</a>
         `;
         return item;
     }
 
-    /**
-     * 创建失败结果项
-     */
-    createErrorItem(error, isRetrying = false, retryTimes = 0) {
+    createErrorItem(error, isRetrying) {
         const item = document.createElement('div');
         item.className = 'result-item error slide-in-left';
+        item.dataset.topic = error.topic;
+        const retryHint = error.retry_count > 0 ? ` (已重试 ${error.retry_count} 次)` : '';
+        const title = error.topic.length > 50 ? error.topic.substring(0, 50) + '...' : error.topic;
 
         if (isRetrying) {
-            // 正在重试的状态
-            const retryText = retryTimes > 1 ? `第 ${retryTimes} 次重试中...` : '正在重试生成...';
-            item.innerHTML = `
-                <div class="result-title">⏳ ${error.topic}</div>
-                <div class="result-info" style="color: #007bff;">${retryText}</div>
-                <div class="result-actions">
-                    <button class="btn btn-secondary btn-small" disabled>
-                        🔄 重试中...
-                    </button>
-                </div>
-            `;
+            item.innerHTML = `<div class="result-title">⏳ ${title}${retryHint}</div><div class="result-info" style="color: #007bff;">正在重试...</div>`;
         } else {
-            // 失败状态
-            const retryHint = retryTimes > 0 ? ` (已重试 ${retryTimes} 次)` : '';
             item.innerHTML = `
-                <div class="result-title">✗ ${error.topic}${retryHint}</div>
+                <div class="result-title">✗ ${title}${retryHint}</div>
                 <div class="result-info">错误: ${error.error}</div>
                 <div class="result-actions">
-                    <button class="btn btn-secondary btn-small retry-btn" data-topic="${error.topic}">
-                        🔄 重试
-                    </button>
-                    <button class="btn btn-secondary btn-small discard-btn" data-topic="${error.topic}">
-                        ✕ 放弃
-                    </button>
-                </div>
-            `;
+                    <button class="btn btn-secondary btn-small retry-btn" data-topic="${error.topic}">🔄 重试</button>
+                    <button class="btn btn-secondary btn-small discard-btn" data-topic="${error.topic}">✕ 放弃</button>
+                </div>`;
         }
-
         return item;
     }
 
-    /**
-     * 处理结果项按钮点击
-     */
+    createPendingItem(topic) {
+        const item = document.createElement('div');
+        item.className = 'result-item pending';
+        item.dataset.topic = topic;
+        const title = topic.length > 50 ? topic.substring(0, 50) + '...' : topic;
+        item.innerHTML = `<div class="result-title">⏳ ${title}</div><div class="result-info">正在等待生成...</div>`;
+        return item;
+    }
+
     async handleResultAction(event) {
         const target = event.target;
-        console.log('按钮点击事件触发', target.className, target.textContent);
-
-        // 处理重试按钮
-        if (target.classList.contains('retry-btn')) {
-            console.log('检测到重试按钮点击');
-            await this.handleRetry(target);
-        }
-
-        // 处理放弃按钮
-        if (target.classList.contains('discard-btn')) {
-            console.log('检测到放弃按钮点击');
-            this.handleDiscard(target);
-        }
+        if (target.classList.contains('retry-btn')) await this.handleRetry(target);
+        if (target.classList.contains('discard-btn')) this.handleDiscard(target);
     }
 
-    /**
-     * 处理重试
-     */
     async handleRetry(button) {
         const topic = button.dataset.topic;
-        const taskId = this.stateManager.currentTaskId;
+        let taskId = this.stateManager.currentTaskId || '';
+        if (!topic) return;
 
-        console.log('handleRetry 被调用', { topic, taskId });
-
-        if (!topic || !taskId) {
-            console.error('缺少必要参数', { topic, taskId });
-            toast.error('重试失败：缺少必要信息');
-            return;
-        }
-
-        // 增加重试次数
-        const currentCount = this.retryCount.get(topic) || 0;
-        this.retryCount.set(topic, currentCount + 1);
-        console.log('重试次数:', currentCount + 1);
-
-        // 立即添加到重试集合，提供即时反馈
         this.retryingTopics.add(topic);
-
-        // 立即更新UI显示重试状态
         const item = button.closest('.result-item');
-        const retryText = currentCount > 0 ? `第 ${currentCount + 1} 次重试中...` : '正在重试生成...';
-        item.querySelector('.result-title').innerHTML = `⏳ ${topic}`;
-        item.querySelector('.result-info').innerHTML = `<span style="color: #007bff;">正在提交重试请求...</span>`;
-        button.disabled = true;
-        button.textContent = '🔄 重试中...';
-
-        console.log('UI已更新为重试中状态');
+        const retryCount = (item.innerHTML.match(/已重试 (\d+)/)?.[1] || 0);
+        const errorData = { topic, error: '', retry_count: parseInt(retryCount) };
+        this.replacePlaceholder(topic, this.createErrorItem(errorData, true));
 
         try {
-            console.log('调用 API 重试:', taskId, [topic]);
             const response = await api.retryFailedTopics(taskId, [topic]);
-            console.log('API 响应:', response);
-
-            // 更新状态提示
-            item.querySelector('.result-info').innerHTML = `<span style="color: #007bff;">${retryText}</span>`;
-
-            // 重新启动轮询
-            this.setGenerateButtonState(true, '生成中...');
-
-            this.stopPolling();
-            this.startPolling(taskId);
-
+            if (response.new_task && response.task_id) {
+                this.stateManager.saveTaskProgress(response.task_id, this.stateManager.getSavedTask().topics);
+                this.startPolling(response.task_id);
+                toast.info('原任务已失效，已创建新任务重试');
+            } else {
+                this.startPolling(taskId); // 继续轮询同一个任务
+            }
             toast.success('重试请求已提交！');
-            console.log('重试请求提交成功');
         } catch (error) {
-            console.error('重试请求失败:', error);
-
-            // 重试失败，从重试集合中移除，并减少计数
             this.retryingTopics.delete(topic);
-            this.retryCount.set(topic, currentCount);
-
             toast.error('重试请求失败: ' + error.message);
-
-            // 恢复错误显示
-            const retryHint = currentCount > 0 ? ` (已重试 ${currentCount} 次)` : '';
-            item.querySelector('.result-title').innerHTML = `✗ ${topic}${retryHint}`;
-            item.querySelector('.result-info').innerHTML = `错误: ${error.message}`;
-            button.disabled = false;
-            button.textContent = '🔄 重试';
+            errorData.error = error.message;
+            this.replacePlaceholder(topic, this.createErrorItem(errorData, false));
         }
     }
 
-    /**
-     * 处理放弃
-     */
     handleDiscard(button) {
         const topic = button.dataset.topic;
-
-        console.log('handleDiscard 被调用', { topic });
-
-        if (!topic) {
-            console.error('放弃操作缺少topic参数');
-            return;
-        }
-
-        // 立即禁用所有按钮并更新文本，提供即时反馈
-        const item = button.closest('.result-item');
-        const retryBtn = item.querySelector('.retry-btn');
-        const discardBtn = item.querySelector('.discard-btn');
-
-        if (retryBtn) retryBtn.disabled = true;
-        if (discardBtn) {
-            discardBtn.disabled = true;
-            discardBtn.textContent = '✕ 放弃中...';
-        }
-
-        console.log('放弃按钮UI已更新');
-
-        // 添加到放弃集合
+        if (!topic) return;
         this.discardedTopics.add(topic);
-
-        // 如果在重试集合中，也移除
-        if (this.retryingTopics.has(topic)) {
-            this.retryingTopics.delete(topic);
-        }
-
-        // 显示即时反馈
-        toast.info('正在放弃该任务...');
-
-        // 添加淡出动画并移除
+        const item = button.closest('.result-item');
         item.classList.add('fade-out');
-        setTimeout(() => {
-            item.remove();
-            toast.success('已成功放弃该任务');
-            console.log('任务已从列表中移除');
-        }, 300);
+        setTimeout(() => item.remove(), 300);
+        toast.success(`已放弃任务: ${topic.substring(0, 30)}...`);
     }
 
-    /**
-     * 批量重试所有失败项
-     */
     async handleRetryAll() {
-        const taskId = this.stateManager.currentTaskId;
-        if (!taskId) return;
-
-        // 收集所有失败且未在重试中的主题
-        const failedTopics = [];
-        const retryButtons = this.resultsList.querySelectorAll('.retry-btn:not(:disabled)');
-
-        retryButtons.forEach(button => {
-            const topic = button.dataset.topic;
-            if (topic && !this.retryingTopics.has(topic)) {
-                failedTopics.push(topic);
-            }
-        });
+        // ... (内容未改变，为简洁省略) ...
+        let taskId = this.stateManager.currentTaskId || '';
+        const failedTopics = Array.from(this.resultsList.querySelectorAll('.retry-btn'))
+                                 .map(btn => btn.dataset.topic)
+                                 .filter(topic => topic && !this.retryingTopics.has(topic));
 
         if (failedTopics.length === 0) {
             toast.warning('没有可重试的失败项');
             return;
         }
+        if (!confirm(`确定要重试全部 ${failedTopics.length} 个失败项吗？`)) return;
 
-        // 确认操作
-        if (!confirm(`确定要重试全部 ${failedTopics.length} 个失败项吗？`)) {
-            return;
-        }
-
-        // 标记所有主题为重试中
         failedTopics.forEach(topic => {
-            const currentCount = this.retryCount.get(topic) || 0;
-            this.retryCount.set(topic, currentCount + 1);
             this.retryingTopics.add(topic);
+            const item = this.resultsList.querySelector(`.result-item[data-topic="${topic}"]`);
+            if(item) {
+                const retryCount = (item.innerHTML.match(/已重试 (\d+)/)?.[1] || 0);
+                this.replacePlaceholder(topic, this.createErrorItem({ topic, error: '', retry_count: parseInt(retryCount) }, true));
+            }
         });
 
-        // 禁用批量按钮
         this.retryAllBtn.disabled = true;
         this.retryAllBtn.textContent = '重试中...';
 
         try {
-            await api.retryFailedTopics(taskId, failedTopics);
-
-            // 重新启动轮询
-            this.setGenerateButtonState(true, '生成中...');
-            this.stopPolling();
-            this.startPolling(taskId);
-
+            const response = await api.retryFailedTopics(taskId, failedTopics);
+            if (response.new_task && response.task_id) {
+                this.stateManager.saveTaskProgress(response.task_id, this.stateManager.getSavedTask().topics);
+                this.startPolling(response.task_id);
+                toast.info('原任务已失效，已创建新任务进行批量重试');
+            } else {
+                this.startPolling(taskId);
+            }
             toast.success(`已提交 ${failedTopics.length} 个主题重试！`);
         } catch (error) {
-            // 重试失败，恢复状态
-            failedTopics.forEach(topic => {
-                this.retryingTopics.delete(topic);
-                const currentCount = this.retryCount.get(topic) || 0;
-                this.retryCount.set(topic, Math.max(0, currentCount - 1));
-            });
-
+            failedTopics.forEach(topic => this.retryingTopics.delete(topic));
             toast.error('批量重试请求失败: ' + error.message);
         } finally {
             this.retryAllBtn.disabled = false;
@@ -531,129 +325,55 @@ class TaskManager {
         }
     }
 
-    /**
-     * 批量放弃所有失败项
-     */
-    async handleDiscardAll() {
-        // 收集所有失败项
-        const failedItems = this.resultsList.querySelectorAll('.result-item.error');
-
+    handleDiscardAll() {
+        // ... (内容未改变，为简洁省略) ...
+        const failedItems = this.resultsList.querySelectorAll('.result-item.error .discard-btn');
         if (failedItems.length === 0) {
             toast.warning('没有可放弃的失败项');
             return;
         }
+        if (!confirm(`确定要放弃全部 ${failedItems.length} 个失败项吗？`)) return;
 
-        // 确认操作
-        if (!confirm(`确定要放弃全部 ${failedItems.length} 个失败项吗？`)) {
-            return;
-        }
-
-        // 立即禁用批量按钮并更新文本，提供即时反馈
-        this.discardAllBtn.disabled = true;
-        this.discardAllBtn.textContent = '✕ 放弃中...';
-
-        // 显示即时反馈
-        toast.info(`正在放弃 ${failedItems.length} 个失败项...`);
-
-        // 收集所有主题并添加到放弃集合
-        failedItems.forEach(item => {
-            const discardBtn = item.querySelector('.discard-btn');
-            const retryBtn = item.querySelector('.retry-btn');
-
-            // 禁用所有按钮
-            if (discardBtn) {
-                discardBtn.disabled = true;
-                const topic = discardBtn.dataset.topic;
-                if (topic) {
-                    this.discardedTopics.add(topic);
-
-                    // 如果在重试集合中，也移除
-                    if (this.retryingTopics.has(topic)) {
-                        this.retryingTopics.delete(topic);
-                    }
-                }
-            }
-            if (retryBtn) retryBtn.disabled = true;
-
-            // 添加淡出动画
-            item.classList.add('fade-out');
-        });
-
-        // 等待动画完成后移除并恢复按钮状态
-        setTimeout(() => {
-            failedItems.forEach(item => item.remove());
-
-            // 恢复按钮状态
-            this.discardAllBtn.disabled = false;
-            this.discardAllBtn.textContent = '✕ 放弃全部失败项';
-
-            // 隐藏批量操作按钮（因为没有失败项了）
-            this.batchActions.style.display = 'none';
-
-            // 显示成功提示
-            toast.success(`已成功放弃 ${failedItems.length} 个失败项`);
-        }, 300);
+        failedItems.forEach(btn => this.handleDiscard(btn));
     }
 
-    /**
-     * 更新进度条
-     */
-    updateProgress(progress, text) {
-        if (progress !== null) {
-            this.progressFill.style.width = `${progress}%`;
-        }
-        if (text) {
-            this.progressText.textContent = text;
-        }
+    resetUIState() {
+        this.stopPolling();
+        this.setGenerateButtonState(true, '生成中...');
+        this.updateProgress(0, '正在启动任务...');
+        this.showProgress();
+        this.resultsList.innerHTML = '';
+        this.hasScrolledToResults = false;
+        this.discardedTopics.clear();
+        this.retryingTopics.clear();
     }
 
-    /**
-     * 显示进度区域
-     */
-    showProgress() {
-        this.progressArea.style.display = 'block';
+    renderInitialPending(topics) {
+        this.resultsList.innerHTML = '';
+        topics.forEach(topic => this.resultsList.appendChild(this.createPendingItem(topic)));
+        if (topics.length > 0) this.showResults();
     }
 
-    /**
-     * 隐藏进度区域
-     */
-    hideProgress() {
-        this.progressArea.style.display = 'none';
-    }
-
-    /**
-     * 显示结果区域
-     */
-    showResults() {
-        this.resultsArea.style.display = 'block';
-    }
-
-    /**
-     * 隐藏结果区域
-     */
-    hideResults() {
-        this.resultsArea.style.display = 'none';
-    }
-
-    /**
-     * 设置生成按钮状态
-     */
-    setGenerateButtonState(disabled, text) {
-        this.generateBtn.disabled = disabled;
-        if (text) {
-            this.generateBtn.textContent = text;
-        }
-    }
-
-    /**
-     * 重置UI
-     */
     resetUI() {
         this.hideProgress();
+        this.hideResults();
         this.setGenerateButtonState(false, '开始生成');
         this.stopPolling();
     }
+
+    updateProgress(progress, text) {
+        this.progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+        this.progressText.textContent = text;
+    }
+
+    showProgress() { this.progressArea.style.display = 'block'; }
+    hideProgress() { this.progressArea.style.display = 'none'; }
+    showResults() { this.resultsArea.style.display = 'block'; }
+    hideResults() { this.resultsArea.style.display = 'none'; }
+    setGenerateButtonState(disabled, text) {
+        this.generateBtn.disabled = disabled;
+        if (text) this.generateBtn.textContent = text;
+    }
 }
 
-// 导出到全局
 window.TaskManager = TaskManager;

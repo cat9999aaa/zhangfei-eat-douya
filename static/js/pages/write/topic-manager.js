@@ -13,6 +13,15 @@ class TopicManager {
         this.stateManager = options.stateManager;
         this.onImageSettingClick = options.onImageSettingClick;
 
+        // 批量导入相关元素
+        this.batchImportBtn = document.getElementById('batchImportBtn');
+        this.batchImportModal = document.getElementById('batchImportModal');
+        this.batchImportTextarea = document.getElementById('batchImportTextarea');
+        this.importCount = document.getElementById('importCount');
+        this.confirmImportBtn = document.getElementById('confirmImportBtn');
+        this.cancelImportBtn = document.getElementById('cancelImportBtn');
+        this.closeBatchImportModal = document.getElementById('closeBatchImportModal');
+
         this.init();
     }
 
@@ -22,6 +31,24 @@ class TopicManager {
 
         // 清空按钮事件
         this.clearButton.addEventListener('click', () => this.clearAll());
+
+        // 批量导入按钮事件
+        this.batchImportBtn.addEventListener('click', () => this.openBatchImportModal());
+
+        // 批量导入弹窗事件
+        this.confirmImportBtn.addEventListener('click', () => this.confirmBatchImport());
+        this.cancelImportBtn.addEventListener('click', () => this.closeBatchImport());
+        this.closeBatchImportModal.addEventListener('click', () => this.closeBatchImport());
+
+        // 监听文本框输入，实时显示标题数量
+        this.batchImportTextarea.addEventListener('input', () => this.updateImportCount());
+
+        // 点击弹窗外部关闭
+        this.batchImportModal.addEventListener('click', (e) => {
+            if (e.target === this.batchImportModal) {
+                this.closeBatchImport();
+            }
+        });
     }
 
     /**
@@ -220,6 +247,90 @@ class TopicManager {
         const topics = this.getAllTopics();
         const enableImage = document.getElementById('enableImage')?.checked || false;
         this.stateManager.savePageState(topics, enableImage);
+    }
+
+    /**
+     * 打开批量导入弹窗
+     */
+    openBatchImportModal() {
+        this.batchImportTextarea.value = '';
+        this.updateImportCount();
+        this.batchImportModal.style.display = 'flex';
+        this.batchImportTextarea.focus();
+    }
+
+    /**
+     * 关闭批量导入弹窗
+     */
+    closeBatchImport() {
+        this.batchImportModal.style.display = 'none';
+        this.batchImportTextarea.value = '';
+        this.updateImportCount();
+    }
+
+    /**
+     * 更新导入数量显示
+     */
+    updateImportCount() {
+        const text = this.batchImportTextarea.value;
+        const lines = text.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        const count = Math.min(lines.length, this.maxTopics);
+        this.importCount.textContent = count;
+
+        // 超过限制时提示
+        if (lines.length > this.maxTopics) {
+            this.importCount.style.color = 'var(--error-color)';
+            this.importCount.textContent = `${count} (超出部分将被忽略)`;
+        } else {
+            this.importCount.style.color = 'var(--primary-color)';
+            this.importCount.textContent = count;
+        }
+    }
+
+    /**
+     * 确认批量导入
+     */
+    confirmBatchImport() {
+        const text = this.batchImportTextarea.value;
+        const lines = text.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        if (lines.length === 0) {
+            toast.warning('请输入至少一个标题');
+            return;
+        }
+
+        // 限制最多50条
+        const topics = lines.slice(0, this.maxTopics);
+
+        // 清空现有标题
+        this.container.innerHTML = '';
+        this.topicCount = 0;
+
+        // 批量添加
+        topics.forEach(topic => {
+            this.addTopic(topic);
+        });
+
+        // 保存状态
+        this.saveState();
+
+        // 关闭弹窗
+        this.closeBatchImport();
+
+        // 提示
+        const importedCount = topics.length;
+        const ignoredCount = lines.length - importedCount;
+
+        if (ignoredCount > 0) {
+            toast.success(`成功导入 ${importedCount} 条标题，超出限制的 ${ignoredCount} 条已忽略`);
+        } else {
+            toast.success(`成功导入 ${importedCount} 条标题`);
+        }
     }
 }
 

@@ -81,6 +81,14 @@ def build_comfyui_workflow_payload(prompts, settings):
         '{{filename_prefix}}': 'auto_' + datetime.now().strftime('%Y%m%d')
     }
 
+    # 打印调试信息
+    print(f"  ComfyUI 提示词:")
+    print(f"    正面: {prompts['positive_prompt'][:100]}..." if len(prompts['positive_prompt']) > 100 else f"    正面: {prompts['positive_prompt']}")
+    print(f"    负面: {prompts['negative_prompt'][:100]}..." if len(prompts['negative_prompt']) > 100 else f"    负面: {prompts['negative_prompt']}")
+
+    # 跟踪占位符是否被替换
+    found_placeholders = {'{{positive_prompt}}': False, '{{negative_prompt}}': False}
+
     for node in prompt_graph.values():
         inputs = node.get('inputs', {})
         if not isinstance(inputs, dict):
@@ -91,11 +99,19 @@ def build_comfyui_workflow_payload(prompts, settings):
                 for placeholder, actual in replacements.items():
                     if placeholder in value:
                         inputs[key] = value.replace(placeholder, actual)
+                        if placeholder in found_placeholders:
+                            found_placeholders[placeholder] = True
 
             if key == 'seed':
                 inputs[key] = seed
             elif key == 'filename_prefix' and isinstance(value, str) and '{{filename_prefix}}' not in value:
                 inputs[key] = 'auto_' + datetime.now().strftime('%Y%m%d')
+
+    # 警告：如果占位符未找到
+    if not found_placeholders['{{positive_prompt}}']:
+        print(f"  ⚠️  警告: workflow 中未找到 {{{{positive_prompt}}}} 占位符")
+    if not found_placeholders['{{negative_prompt}}']:
+        print(f"  ⚠️  警告: workflow 中未找到 {{{{negative_prompt}}}} 占位符")
 
     return {
         'prompt': prompt_graph

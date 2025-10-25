@@ -151,16 +151,31 @@ def retry_failed_topics():
     task_id = data.get('task_id')
     topics_to_retry = data.get('topics', [])
 
-    if not task_id or not topics_to_retry:
-        return jsonify({'error': '缺少 task_id 或 topics'}), 400
+    if not topics_to_retry:
+        return jsonify({'error': '缺少 topics'}), 400
 
     config = load_config()
-    success = retry_failed_topics_in_task(task_id, topics_to_retry, config)
 
-    if not success:
-        return jsonify({'error': '任务不存在'}), 404
+    # 尝试在现有任务中重试
+    result = retry_failed_topics_in_task(task_id, topics_to_retry, config)
 
-    return jsonify({'success': True, 'message': f'已重新提交 {len(topics_to_retry)} 个主题进行生成'})
+    if result.get('success'):
+        # 成功在现有任务中重试
+        return jsonify({
+            'success': True,
+            'task_id': result['task_id'],
+            'message': f'已重新提交 {len(topics_to_retry)} 个主题进行生成'
+        })
+    elif result.get('new_task'):
+        # 旧任务不存在，创建了新任务
+        return jsonify({
+            'success': True,
+            'task_id': result['task_id'],
+            'new_task': True,
+            'message': f'原任务已失效，已创建新任务重试 {len(topics_to_retry)} 个主题'
+        })
+    else:
+        return jsonify({'error': '重试失败'}), 500
 
 
 # ====================

@@ -11,7 +11,10 @@
             <label>文章标题/主题:</label>
             <p class="help-text">最多可输入 50 个标题，系统将为每个标题生成独立的文章</p>
             <div id="topicsContainer"></div>
-            <button id="addTopicBtn" class="btn btn-secondary btn-small">+ 添加标题</button>
+            <div class="button-group" style="gap: 10px;">
+                <button id="addTopicBtn" class="btn btn-secondary btn-small">+ 添加标题</button>
+                <button id="batchImportBtn" class="btn btn-secondary btn-small">📋 批量导入</button>
+            </div>
         </div>
 
         <div class="form-group">
@@ -114,6 +117,32 @@
             <button id="saveImageBtn" class="btn btn-primary">保存设置</button>
             <button id="clearImageBtn" class="btn btn-secondary">清除图片</button>
             <button id="cancelImageBtn" class="btn btn-secondary">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 批量导入弹窗 -->
+<div id="batchImportModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📋 批量导入标题</h2>
+            <span class="modal-close" id="closeBatchImportModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p class="help-text" style="margin-bottom: 15px;">
+                每行一个标题，最多支持 50 条。空行将被忽略。
+            </p>
+            <textarea id="batchImportTextarea"
+                      placeholder="示例：&#10;如何提高工作效率&#10;AI 对未来的影响&#10;健康饮食的重要性&#10;......"
+                      rows="12"
+                      style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+            <p class="help-text" style="margin-top: 10px;">
+                <span id="importCount" style="font-weight: bold; color: var(--primary-color);">0</span> 条标题
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button id="confirmImportBtn" class="btn btn-primary">确认导入</button>
+            <button id="cancelImportBtn" class="btn btn-secondary">取消</button>
         </div>
     </div>
 </div>

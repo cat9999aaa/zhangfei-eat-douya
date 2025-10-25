@@ -50,7 +50,7 @@
   },
   "5": {
     "inputs": {
-      "text": "{{negative_prompt}}",
+      "text": "",
       "clip": [
         "7",
         0

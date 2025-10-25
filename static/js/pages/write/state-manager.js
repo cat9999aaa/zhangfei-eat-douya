@@ -73,10 +73,11 @@ class WriteStateManager {
     /**
      * 保存任务进度
      */
-    saveTaskProgress(taskId) {
+    saveTaskProgress(taskId, topics) {
         this.currentTaskId = taskId;
         storage.set(this.TASK_KEY, {
             taskId,
+            topics, // 保存主题列表
             timestamp: Date.now()
         });
     }

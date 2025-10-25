@@ -10,10 +10,6 @@ from .gemini_service import (
 )
 
 from .image_service import (
-    download_unsplash_image,
-    download_pexels_image,
-    download_pixabay_image,
-    get_local_image_by_tags,
     list_local_images,
     list_uploaded_images,
     test_unsplash_connection,
@@ -36,8 +32,7 @@ from .task_service import (
     create_generation_task,
     get_task_status,
     retry_failed_topics_in_task,
-    create_executor,
-    initialize_executor
+    update_executor_workers
 )
 
 __all__ = [
@@ -47,10 +42,6 @@ __all__ = [
     'summarize_paragraph_for_image',
     'test_gemini_model',
     'get_available_models',
-    'download_unsplash_image',
-    'download_pexels_image',
-    'download_pixabay_image',
-    'get_local_image_by_tags',
     'list_local_images',
     'list_uploaded_images',
     'test_unsplash_connection',
@@ -64,6 +55,5 @@ __all__ = [
     'create_generation_task',
     'get_task_status',
     'retry_failed_topics_in_task',
-    'create_executor',
-    'initialize_executor'
+    'update_executor_workers'
 ]
