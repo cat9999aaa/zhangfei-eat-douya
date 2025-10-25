@@ -2,173 +2,629 @@
 
 {% block title %}配置 - AI 文章生成器{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tabs.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="config-page">
-    <h1>系统配置</h1>
+    <h1>⚙️ 系统配置</h1>
 
-    <div class="config-section">
-        <h2>Gemini API 配置</h2>
-        <div class="form-group">
-            <label for="geminiApiKey">Gemini API Key:</label>
-            <input type="password" id="geminiApiKey" placeholder="请输入您的 Gemini API Key">
-            <p class="help-text">获取地址: <a href="https://makersuite.google.com/app/apikey" target="_blank">https://makersuite.google.com/app/apikey</a></p>
-        </div>
+    <!-- Tab 导航 -->
+    <div class="tabs-container">
+        <nav class="tabs-nav">
+            <button class="tab-button active" data-tab="tab-basic">
+                <span class="tab-icon">🎯</span>
+                必需配置
+            </button>
+            <button class="tab-button" data-tab="tab-image-api">
+                <span class="tab-icon">🌐</span>
+                图片 API
+            </button>
+            <button class="tab-button" data-tab="tab-comfyui">
+                <span class="tab-icon">🎨</span>
+                AI 绘图
+            </button>
+            <button class="tab-button" data-tab="tab-local">
+                <span class="tab-icon">📁</span>
+                本地图库
+            </button>
+            <button class="tab-button" data-tab="tab-advanced">
+                <span class="tab-icon">🔧</span>
+                高级设置
+            </button>
+        </nav>
 
-        <div class="form-group">
-            <label for="geminiBaseUrl">Gemini Base URL:</label>
-            <input type="text" id="geminiBaseUrl" value="https://generativelanguage.googleapis.com" placeholder="API Base URL">
-            <p class="help-text">使用自定义代理时修改此项</p>
-        </div>
+        <!-- Tab 内容区 -->
+        <div class="tabs-content">
+            <!-- Tab 1: 必需配置 -->
+            <div id="tab-basic" class="tab-pane active">
+                <div class="info-box">
+                    <span class="info-icon">💡</span>
+                    <strong>这些是最基础的配置，必须先设置才能使用系统</strong>
+                </div>
 
-        <div class="form-group">
-            <label for="defaultModel">默认模型:</label>
-            <select id="defaultModel">
-                <option value="gemini-pro">gemini-pro</option>
-            </select>
-        </div>
+                <!-- AI 模型配置 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">🤖</span>
+                        <div>
+                            <h3 class="config-card-title">AI 模型配置</h3>
+                            <p class="config-card-description">配置 Gemini API 以生成文章内容</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiApiKey">
+                                <span class="icon">🔑</span>
+                                Gemini API Key
+                            </label>
+                            <div class="config-item-input">
+                                <input type="password" id="geminiApiKey" placeholder="请输入您的 Gemini API Key">
+                            </div>
+                            <p class="config-item-help">
+                                获取地址: <a href="https://makersuite.google.com/app/apikey" target="_blank">https://makersuite.google.com/app/apikey</a>
+                            </p>
+                        </div>
 
-        <div class="form-group">
-            <label for="maxConcurrentTasks">同时生成文章数量:</label>
-            <input type="number" id="maxConcurrentTasks" value="3" min="1" max="10">
-            <p class="help-text">设置同时请求 API 的线程数，建议不要超过5，以免触发 API 频率限制。</p>
-        </div>
-    </div>
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiBaseUrl">
+                                <span class="icon">🌐</span>
+                                Gemini Base URL
+                            </label>
+                            <div class="config-item-input">
+                                <input type="text" id="geminiBaseUrl" value="https://generativelanguage.googleapis.com" placeholder="API Base URL">
+                            </div>
+                            <p class="config-item-help">使用自定义代理时修改此项</p>
+                        </div>
 
-    <div class="config-section">
-        <h2>图片 API 配置 (可选)</h2>
+                        <div class="config-item">
+                            <label class="config-item-label" for="defaultModel">
+                                <span class="icon">🧠</span>
+                                默认模型
+                            </label>
+                            <div class="config-item-input">
+                                <select id="defaultModel">
+                                    <option value="gemini-pro">gemini-pro</option>
+                                </select>
+                                <button id="refreshDefaultModels" class="btn btn-secondary btn-small" type="button">刷新列表</button>
+                                <button id="testDefaultModel" class="btn btn-secondary btn-small" type="button">测试模型</button>
+                            </div>
+                            <div id="defaultModelTestResult" class="test-result"></div>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="form-group">
-            <label for="unsplashKey">Unsplash Access Key:</label>
-            <input type="password" id="unsplashKey" placeholder="用于下载文章配图">
-            <p class="help-text">获取地址: <a href="https://unsplash.com/developers" target="_blank">https://unsplash.com/developers</a></p>
-            <button id="testUnsplash" class="btn btn-secondary btn-small" type="button">测试 Unsplash API</button>
-            <div id="unsplashTestResult" class="test-result" style="display: none;"></div>
-        </div>
+                <!-- 文档生成配置 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📄</span>
+                        <div>
+                            <h3 class="config-card-title">文档生成配置</h3>
+                            <p class="config-card-description">配置文档生成的基本参数</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="pandocPath">
+                                <span class="icon">📦</span>
+                                Pandoc 可执行文件路径
+                            </label>
+                            <div class="config-item-input">
+                                <input type="text" id="pandocPath" placeholder="例如: C:\Program Files\Pandoc\pandoc.exe">
+                            </div>
+                            <p class="config-item-help">下载地址: <a href="https://pandoc.org/installing.html" target="_blank">https://pandoc.org/installing.html</a></p>
+                        </div>
 
-        <div class="form-group">
-            <label for="pexelsKey">Pexels API Key:</label>
-            <input type="password" id="pexelsKey" placeholder="用于下载文章配图">
-            <p class="help-text">获取地址: <a href="https://www.pexels.com/api/" target="_blank">https://www.pexels.com/api/</a></p>
-            <button id="testPexels" class="btn btn-secondary btn-small" type="button">测试 Pexels API</button>
-            <div id="pexelsTestResult" class="test-result" style="display: none;"></div>
-        </div>
+                        <div class="config-item">
+                            <label class="config-item-label" for="outputDirectory">
+                                <span class="icon">📂</span>
+                                输出目录
+                            </label>
+                            <div class="config-item-input">
+                                <input type="text" id="outputDirectory" value="output" placeholder="输出目录路径">
+                            </div>
+                        </div>
 
-        <div class="form-group">
-            <label for="pixabayKey">Pixabay API Key:</label>
-            <input type="password" id="pixabayKey" placeholder="用于下载文章配图">
-            <p class="help-text">获取地址: <a href="https://pixabay.com/api/docs/" target="_blank">https://pixabay.com/api/docs/</a></p>
-            <button id="testPixabay" class="btn btn-secondary btn-small" type="button">测试 Pixabay API</button>
-            <div id="pixabayTestResult" class="test-result" style="display: none;"></div>
-        </div>
+                        <div class="config-item">
+                            <label class="config-item-label" for="maxConcurrentTasks">
+                                <span class="icon">⚡</span>
+                                同时生成文章数量
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="maxConcurrentTasks" value="3" min="1" max="10">
+                            </div>
+                            <p class="config-item-help">建议不要超过5，以免触发 API 频率限制</p>
+                        </div>
 
-        <div class="form-group">
-            <label>图片源优先级:</label>
-            <p class="help-text">拖拽排序，程序将按顺序尝试获取图片，如果前一个失败则尝试下一个</p>
-            <ul id="imagePriorityList" class="sortable-list">
-                <li data-source="unsplash">Unsplash</li>
-                <li data-source="pexels">Pexels</li>
-                <li data-source="pixabay">Pixabay</li>
-                <li data-source="local">本地图库</li>
-                <li data-source="user_uploaded">用户上传</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="config-section">
-        <h2>本地图库配置</h2>
-        <div class="form-group">
-            <label>本地图片目录:</label>
-            <p class="help-text">配置本地图片目录及其标签，系统会根据文章主题匹配相应标签的图片</p>
-            <div id="localImageDirs">
-                <!-- 动态加载 -->
+                        <div class="config-item">
+                            <label class="config-item-label" for="defaultPrompt">
+                                <span class="icon">📝</span>
+                                默认提示词模板
+                            </label>
+                            <div class="config-item-input">
+                                <textarea id="defaultPrompt" rows="4" placeholder="输入自定义提示词模板（可选）"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button id="addImageDir" class="btn btn-secondary btn-small" type="button">+ 添加目录</button>
+
+            <!-- Tab 2: 图片 API -->
+            <div id="tab-image-api" class="tab-pane">
+                <div class="info-box">
+                    <span class="info-icon">💡</span>
+                    <strong>这些API是可选的，用于自动下载文章配图。至少配置一个以启用自动配图功能。</strong>
+                </div>
+
+                <!-- Unsplash -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📷</span>
+                        <div>
+                            <h3 class="config-card-title">Unsplash API</h3>
+                            <p class="config-card-description">高质量免费图片库</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="unsplashKey">
+                                <span class="icon">🔑</span>
+                                Access Key
+                            </label>
+                            <div class="config-item-input">
+                                <input type="password" id="unsplashKey" placeholder="用于下载文章配图">
+                                <button id="testUnsplash" class="btn btn-secondary btn-small" type="button">测试 API</button>
+                            </div>
+                            <p class="config-item-help">
+                                获取地址: <a href="https://unsplash.com/developers" target="_blank">https://unsplash.com/developers</a>
+                            </p>
+                            <div id="unsplashTestResult" class="test-result"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pexels -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📷</span>
+                        <div>
+                            <h3 class="config-card-title">Pexels API</h3>
+                            <p class="config-card-description">免费商用图片和视频</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="pexelsKey">
+                                <span class="icon">🔑</span>
+                                API Key
+                            </label>
+                            <div class="config-item-input">
+                                <input type="password" id="pexelsKey" placeholder="用于下载文章配图">
+                                <button id="testPexels" class="btn btn-secondary btn-small" type="button">测试 API</button>
+                            </div>
+                            <p class="config-item-help">
+                                获取地址: <a href="https://www.pexels.com/api/" target="_blank">https://www.pexels.com/api/</a>
+                            </p>
+                            <div id="pexelsTestResult" class="test-result"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pixabay -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📷</span>
+                        <div>
+                            <h3 class="config-card-title">Pixabay API</h3>
+                            <p class="config-card-description">免费图片和插画</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="pixabayKey">
+                                <span class="icon">🔑</span>
+                                API Key
+                            </label>
+                            <div class="config-item-input">
+                                <input type="password" id="pixabayKey" placeholder="用于下载文章配图">
+                                <button id="testPixabay" class="btn btn-secondary btn-small" type="button">测试 API</button>
+                            </div>
+                            <p class="config-item-help">
+                                获取地址: <a href="https://pixabay.com/api/docs/" target="_blank">https://pixabay.com/api/docs/</a>
+                            </p>
+                            <div id="pixabayTestResult" class="test-result"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: ComfyUI -->
+            <div id="tab-comfyui" class="tab-pane">
+                <div class="info-box">
+                    <span class="info-icon">💡</span>
+                    <strong>ComfyUI 是可选的高级功能，用于AI生成配图。需要本地运行 ComfyUI 服务。</strong>
+                    <p>📖 <a href="https://github.com/comfyanonymous/ComfyUI" target="_blank">配置教程</a></p>
+                </div>
+
+                <!-- 基础设置 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">⚙️</span>
+                        <div>
+                            <h3 class="config-card-title">基础设置</h3>
+                            <p class="config-card-description">配置 ComfyUI 服务连接</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="comfyuiEnabled" checked>
+                                <label for="comfyuiEnabled">启用 ComfyUI</label>
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="comfyuiServerUrl">
+                                <span class="icon">🌐</span>
+                                服务器 URL
+                            </label>
+                            <div class="config-item-input">
+                                <input type="text" id="comfyuiServerUrl" value="http://127.0.0.1:8188" placeholder="ComfyUI 服务器地址">
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="comfyuiWorkflowPath">
+                                <span class="icon">📋</span>
+                                Workflow JSON 路径
+                            </label>
+                            <div class="config-item-input">
+                                <input type="text" id="comfyuiWorkflowPath" placeholder="workflow.json 文件路径">
+                                <button id="testComfyui" class="btn btn-secondary btn-small" type="button">测试工作流</button>
+                            </div>
+                            <div id="comfyuiTestResult" class="test-result"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 摘要模型 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📝</span>
+                        <div>
+                            <h3 class="config-card-title">摘要模型</h3>
+                            <p class="config-card-description">用于生成图片提示词的AI模型</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="comfyuiSummaryModel">
+                                <span class="icon">🤖</span>
+                                摘要模型选择
+                            </label>
+                            <div class="config-item-input">
+                                <select id="comfyuiSummaryModel">
+                                    <option value="gemini-pro">gemini-pro</option>
+                                </select>
+                                <button id="refreshSummaryModels" class="btn btn-secondary btn-small" type="button">刷新列表</button>
+                                <button id="testSummaryModel" class="btn btn-secondary btn-small" type="button">测试模型</button>
+                            </div>
+                            <div id="summaryModelTestResult" class="test-result"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生成参数 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">🎨</span>
+                        <div>
+                            <h3 class="config-card-title">生成参数</h3>
+                            <p class="config-card-description">控制图片生成的效果</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label" for="comfyuiImageCount">
+                                <span class="icon">🖼️</span>
+                                每篇文章生成图片数量
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="comfyuiImageCount" value="1" min="1" max="5">
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="comfyuiStyleTemplate">
+                                <span class="icon">🎭</span>
+                                风格模板
+                            </label>
+                            <div class="config-item-input">
+                                <select id="comfyuiStyleTemplate">
+                                    <option value="custom">自定义</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="config-item custom-style-block">
+                            <label class="config-item-label" for="comfyuiPositiveStyle">
+                                <span class="icon">➕</span>
+                                正面提示词
+                            </label>
+                            <div class="config-item-input">
+                                <textarea id="comfyuiPositiveStyle" rows="3" placeholder="描述想要的效果..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="config-item custom-style-block">
+                            <label class="config-item-label" for="comfyuiNegativeStyle">
+                                <span class="icon">➖</span>
+                                负面提示词
+                            </label>
+                            <div class="config-item-input">
+                                <textarea id="comfyuiNegativeStyle" rows="3" placeholder="描述不想要的效果..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gemini 图像生成 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">✨</span>
+                        <div>
+                            <h3 class="config-card-title">Gemini 图像生成</h3>
+                            <p class="config-card-description">使用 Google Gemini API 生成高质量图片</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="info-box">
+                            <span class="info-icon">💡</span>
+                            <strong>重要提示：Gemini 图像生成功能说明</strong>
+                            <p>⚠️ <strong>当前 Google Gemini API 官方不直接支持图像生成</strong>。此功能需要：</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>使用支持 Imagen API 的代理服务</li>
+                                <li>或使用第三方提供的 Gemini 图像生成 API</li>
+                                <li>如测试失败，建议使用 ComfyUI 本地生成或图片库 API</li>
+                            </ul>
+                            <p>✨ 支持多种风格预设，默认重试 3 次，失败后自动降级到其他图片源</p>
+                        </div>
+
+                        <div class="config-item">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="geminiImageEnabled">
+                                <label for="geminiImageEnabled">启用 Gemini 图像生成（实验性功能）</label>
+                            </div>
+                            <p class="config-item-help">⚠️ 默认禁用。仅在使用支持图像生成的代理服务时启用。</p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageApiKey">
+                                <span class="icon">🔑</span>
+                                API Key（可选）
+                            </label>
+                            <div class="config-item-input">
+                                <input type="password" id="geminiImageApiKey" placeholder="留空则使用通用 Gemini API Key">
+                            </div>
+                            <p class="config-item-help">💡 留空将自动使用"必需配置"标签页中的 Gemini API Key，也可以单独配置专用的 API Key</p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageBaseUrl">
+                                <span class="icon">🌐</span>
+                                Base URL（可选）
+                            </label>
+                            <div class="config-item-input">
+                                <input type="text" id="geminiImageBaseUrl" placeholder="留空则使用通用 Gemini Base URL">
+                            </div>
+                            <p class="config-item-help">💡 留空将自动使用"必需配置"标签页中的 Gemini Base URL，也可以单独配置专用代理服务</p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageModel">
+                                <span class="icon">🤖</span>
+                                图像生成模型
+                            </label>
+                            <div class="config-item-input">
+                                <select id="geminiImageModel">
+                                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (实验版)</option>
+                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                </select>
+                                <button id="loadGeminiImageModels" class="btn btn-secondary btn-small" type="button">刷新列表</button>
+                                <button id="testGeminiImage" class="btn btn-secondary btn-small" type="button">测试生成</button>
+                            </div>
+                            <p class="config-item-help">⚠️ 注意：官方 Gemini API 不直接支持图像生成，需要代理服务支持</p>
+                            <div id="geminiImageTestResult" class="test-result"></div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageStyle">
+                                <span class="icon">🎨</span>
+                                默认风格
+                            </label>
+                            <div class="config-item-input">
+                                <select id="geminiImageStyle">
+                                    <option value="realistic">写实摄影</option>
+                                    <option value="illustration">插画风格</option>
+                                    <option value="anime">动漫风格</option>
+                                    <option value="cyberpunk">赛博朋克</option>
+                                    <option value="business">商业配图</option>
+                                    <option value="watercolor">水彩画</option>
+                                    <option value="minimalist">极简主义</option>
+                                    <option value="fantasy">奇幻风格</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageAspectRatio">
+                                <span class="icon">📐</span>
+                                图片比例
+                            </label>
+                            <div class="config-item-input">
+                                <select id="geminiImageAspectRatio">
+                                    <optgroup label="横向比例">
+                                        <option value="21:9">超宽屏 (21:9)</option>
+                                        <option value="16:9">宽屏 (16:9)</option>
+                                        <option value="4:3">标准横屏 (4:3)</option>
+                                        <option value="3:2">相机横屏 (3:2)</option>
+                                    </optgroup>
+                                    <optgroup label="正方形">
+                                        <option value="1:1">正方形 (1:1)</option>
+                                    </optgroup>
+                                    <optgroup label="纵向比例">
+                                        <option value="9:16">竖屏 (9:16)</option>
+                                        <option value="3:4">标准竖屏 (3:4)</option>
+                                        <option value="2:3">相机竖屏 (2:3)</option>
+                                    </optgroup>
+                                    <optgroup label="弹性比例">
+                                        <option value="5:4">弹性横屏 (5:4)</option>
+                                        <option value="4:5">弹性竖屏 (4:5)</option>
+                                    </optgroup>
+                                </select>
+                                <p class="config-item-help">支持 Gemini 2.5 Flash Image 的10种官方比例</p>
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageCustomPrefix">
+                                <span class="icon">➕</span>
+                                自定义提示词前缀
+                            </label>
+                            <div class="config-item-input">
+                                <textarea id="geminiImageCustomPrefix" rows="2" placeholder="会添加在提示词最前面（可选）"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageCustomSuffix">
+                                <span class="icon">➖</span>
+                                自定义提示词后缀
+                            </label>
+                            <div class="config-item-input">
+                                <textarea id="geminiImageCustomSuffix" rows="2" placeholder="会添加在提示词最后面（可选）"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageMaxRetries">
+                                <span class="icon">🔄</span>
+                                重试次数
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="geminiImageMaxRetries" value="3" min="1" max="5">
+                            </div>
+                            <p class="config-item-help">生成失败时的重试次数（默认 3 次）</p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageTimeout">
+                                <span class="icon">⏱️</span>
+                                超时时间（秒）
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="geminiImageTimeout" value="30" min="10" max="120">
+                            </div>
+                            <p class="config-item-help">单次请求的超时时间</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: 本地图库 -->
+            <div id="tab-local" class="tab-pane">
+                <div class="info-box">
+                    <span class="info-icon">💡</span>
+                    <strong>配置本地图片目录，系统会根据标签匹配文章内容自动选择图片。</strong>
+                </div>
+
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📁</span>
+                        <div>
+                            <h3 class="config-card-title">本地图片目录</h3>
+                            <p class="config-card-description">管理本地图片库的目录和标签</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div id="localImageDirs"></div>
+                        <button id="addImageDir" class="btn btn-secondary" type="button">+ 添加目录</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: 高级设置 -->
+            <div id="tab-advanced" class="tab-pane">
+                <div class="info-box">
+                    <span class="info-icon">💡</span>
+                    <strong>高级用户可以在这里微调系统行为。</strong>
+                </div>
+
+                <!-- 图片源优先级 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">🔀</span>
+                        <div>
+                            <h3 class="config-card-title">图片源优先级</h3>
+                            <p class="config-card-description">拖动以调整图片来源的使用顺序（越靠上越优先）</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <ul id="imagePriorityList" class="draggable-list">
+                            <li data-source="gemini_image">
+                                <span class="drag-handle">☰</span>
+                                <span>Gemini 图像生成 (AI生成)</span>
+                            </li>
+                            <li data-source="comfyui">
+                                <span class="drag-handle">☰</span>
+                                <span>ComfyUI (AI生成)</span>
+                            </li>
+                            <li data-source="user_uploaded">
+                                <span class="drag-handle">☰</span>
+                                <span>用户上传</span>
+                            </li>
+                            <li data-source="pexels">
+                                <span class="drag-handle">☰</span>
+                                <span>Pexels API</span>
+                            </li>
+                            <li data-source="unsplash">
+                                <span class="drag-handle">☰</span>
+                                <span>Unsplash API</span>
+                            </li>
+                            <li data-source="pixabay">
+                                <span class="drag-handle">☰</span>
+                                <span>Pixabay API</span>
+                            </li>
+                            <li data-source="local">
+                                <span class="drag-handle">☰</span>
+                                <span>本地图库</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="config-section">
-        <h2>Pandoc 配置 <span style="color: red;">*必填</span></h2>
-        <div class="form-group">
-            <label for="pandocPath">Pandoc 可执行文件路径: <span style="color: red;">*</span></label>
-            <input type="text" id="pandocPath" placeholder="例如: C:\Program Files\Pandoc\pandoc.exe" required>
-            <p class="help-text">用于将 Markdown 转换为 Word 文档。必须先配置此项才能生成文章。<br>下载地址: <a href="https://pandoc.org/installing.html" target="_blank">https://pandoc.org/installing.html</a></p>
-        </div>
+    <!-- 底部操作按钮 -->
+    <div class="button-group" style="position: sticky; bottom: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); margin-top: 30px;">
+        <button id="saveConfig" class="btn btn-primary btn-large">💾 保存所有配置</button>
+        <button id="resetConfig" class="btn btn-secondary">🔄 恢复默认</button>
     </div>
 
-    <div class="config-section">
-        <h2>写作提示词配置</h2>
-        <div class="form-group">
-            <label for="defaultPrompt">默认写作提示词:</label>
-            <textarea id="defaultPrompt" rows="10" placeholder="设置默认的写作提示词"></textarea>
-            <p class="help-text">使用 {topic} 作为标题的占位符。留空使用系统默认提示词。</p>
-        </div>
-    </div>
-
-    <div class="button-group">
-        <button id="saveConfig" class="btn btn-primary btn-large">保存配置</button>
-        <button id="resetConfig" class="btn btn-secondary">重置为默认</button>
-    </div>
-
+    <!-- 状态消息 -->
     <div id="configStatus" class="status-message" style="display: none;"></div>
 </div>
-
-<style>
-.image-dir-item {
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    border: 1px solid #e0e0e0;
-}
-
-.form-group-inline {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-}
-
-.form-group-inline > div {
-    flex: 1;
-}
-
-.form-group-inline label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.form-group-inline input {
-    width: 100%;
-}
-
-.remove-dir-btn {
-    flex-shrink: 0;
-}
-
-.sortable-list {
-    list-style: none;
-    padding: 0;
-    margin: 10px 0;
-}
-
-.sortable-list li {
-    background: #f0f8ff;
-    padding: 10px 15px;
-    margin: 5px 0;
-    border-radius: 6px;
-    border: 2px solid #007bff;
-    cursor: move;
-    user-select: none;
-}
-
-.sortable-list li:hover {
-    background: #e6f3ff;
-}
-</style>
-
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='config.js') }}"></script>
+<!-- 配置页面模块 -->
+<script src="{{ url_for('static', filename='js/pages/config/tab-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/config-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/api-tester.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/image-directory-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/priority-sorter.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/config/main.js') }}"></script>
 {% endblock %}
