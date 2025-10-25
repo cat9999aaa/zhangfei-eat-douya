@@ -340,14 +340,17 @@ class TaskManager {
      */
     async handleResultAction(event) {
         const target = event.target;
+        console.log('按钮点击事件触发', target.className, target.textContent);
 
         // 处理重试按钮
         if (target.classList.contains('retry-btn')) {
+            console.log('检测到重试按钮点击');
             await this.handleRetry(target);
         }
 
         // 处理放弃按钮
         if (target.classList.contains('discard-btn')) {
+            console.log('检测到放弃按钮点击');
             this.handleDiscard(target);
         }
     }
@@ -359,11 +362,18 @@ class TaskManager {
         const topic = button.dataset.topic;
         const taskId = this.stateManager.currentTaskId;
 
-        if (!topic || !taskId) return;
+        console.log('handleRetry 被调用', { topic, taskId });
+
+        if (!topic || !taskId) {
+            console.error('缺少必要参数', { topic, taskId });
+            toast.error('重试失败：缺少必要信息');
+            return;
+        }
 
         // 增加重试次数
         const currentCount = this.retryCount.get(topic) || 0;
         this.retryCount.set(topic, currentCount + 1);
+        console.log('重试次数:', currentCount + 1);
 
         // 立即添加到重试集合，提供即时反馈
         this.retryingTopics.add(topic);
@@ -376,8 +386,12 @@ class TaskManager {
         button.disabled = true;
         button.textContent = '🔄 重试中...';
 
+        console.log('UI已更新为重试中状态');
+
         try {
-            await api.retryFailedTopics(taskId, [topic]);
+            console.log('调用 API 重试:', taskId, [topic]);
+            const response = await api.retryFailedTopics(taskId, [topic]);
+            console.log('API 响应:', response);
 
             // 更新状态提示
             item.querySelector('.result-info').innerHTML = `<span style="color: #007bff;">${retryText}</span>`;
@@ -389,7 +403,10 @@ class TaskManager {
             this.startPolling(taskId);
 
             toast.success('重试请求已提交！');
+            console.log('重试请求提交成功');
         } catch (error) {
+            console.error('重试请求失败:', error);
+
             // 重试失败，从重试集合中移除，并减少计数
             this.retryingTopics.delete(topic);
             this.retryCount.set(topic, currentCount);
@@ -411,7 +428,25 @@ class TaskManager {
     handleDiscard(button) {
         const topic = button.dataset.topic;
 
-        if (!topic) return;
+        console.log('handleDiscard 被调用', { topic });
+
+        if (!topic) {
+            console.error('放弃操作缺少topic参数');
+            return;
+        }
+
+        // 立即禁用所有按钮并更新文本，提供即时反馈
+        const item = button.closest('.result-item');
+        const retryBtn = item.querySelector('.retry-btn');
+        const discardBtn = item.querySelector('.discard-btn');
+
+        if (retryBtn) retryBtn.disabled = true;
+        if (discardBtn) {
+            discardBtn.disabled = true;
+            discardBtn.textContent = '✕ 放弃中...';
+        }
+
+        console.log('放弃按钮UI已更新');
 
         // 添加到放弃集合
         this.discardedTopics.add(topic);
@@ -421,12 +456,16 @@ class TaskManager {
             this.retryingTopics.delete(topic);
         }
 
-        // 添加淡出动画并移除
-        const item = button.closest('.result-item');
-        item.classList.add('fade-out');
-        setTimeout(() => item.remove(), 300);
+        // 显示即时反馈
+        toast.info('正在放弃该任务...');
 
-        toast.success('已放弃该任务');
+        // 添加淡出动画并移除
+        item.classList.add('fade-out');
+        setTimeout(() => {
+            item.remove();
+            toast.success('已成功放弃该任务');
+            console.log('任务已从列表中移除');
+        }, 300);
     }
 
     /**
@@ -509,10 +548,21 @@ class TaskManager {
             return;
         }
 
+        // 立即禁用批量按钮并更新文本，提供即时反馈
+        this.discardAllBtn.disabled = true;
+        this.discardAllBtn.textContent = '✕ 放弃中...';
+
+        // 显示即时反馈
+        toast.info(`正在放弃 ${failedItems.length} 个失败项...`);
+
         // 收集所有主题并添加到放弃集合
         failedItems.forEach(item => {
             const discardBtn = item.querySelector('.discard-btn');
+            const retryBtn = item.querySelector('.retry-btn');
+
+            // 禁用所有按钮
             if (discardBtn) {
+                discardBtn.disabled = true;
                 const topic = discardBtn.dataset.topic;
                 if (topic) {
                     this.discardedTopics.add(topic);
@@ -523,17 +573,26 @@ class TaskManager {
                     }
                 }
             }
+            if (retryBtn) retryBtn.disabled = true;
 
             // 添加淡出动画
             item.classList.add('fade-out');
         });
 
-        // 等待动画完成后移除
+        // 等待动画完成后移除并恢复按钮状态
         setTimeout(() => {
             failedItems.forEach(item => item.remove());
-        }, 300);
 
-        toast.success(`已放弃 ${failedItems.length} 个失败项`);
+            // 恢复按钮状态
+            this.discardAllBtn.disabled = false;
+            this.discardAllBtn.textContent = '✕ 放弃全部失败项';
+
+            // 隐藏批量操作按钮（因为没有失败项了）
+            this.batchActions.style.display = 'none';
+
+            // 显示成功提示
+            toast.success(`已成功放弃 ${failedItems.length} 个失败项`);
+        }, 300);
     }
 
     /**

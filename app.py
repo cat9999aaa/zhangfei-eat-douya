@@ -30,4 +30,5 @@ if __name__ == '__main__':
     app = create_app()
 
     # 启动应用
-    app.run(debug=True, host='0.0.0.0', port=port)
+    # 在Windows上禁用threaded模式以避免套接字错误
+    app.run(debug=True, host='0.0.0.0', port=port, threaded=False)
