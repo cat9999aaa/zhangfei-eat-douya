@@ -1,499 +1,409 @@
-# 张飞吃豆芽 - AI 智能文章生成器
+# 张飞吃豆芽 · 智能长文生产线
 
-一个功能强大的基于 Google Gemini API 的智能文章创作工具，支持批量生成文章、自动配图、自定义写作风格，并输出高质量的 Word 文档。
-<img width="2730" height="1535" alt="image" src="https://github.com/user-attachments/assets/18dc1a5f-3ae6-449b-a890-add62b3618ab" />
+张飞吃豆芽是一个面向中文内容团队的全自动文章生产平台：一行标题即可批量生成 Word 文档、自动配图、同步归档。它将「写作 + 配图 + 排版 + 下载」整合到 Browser + Flask 的轻量体系里，非常适合新媒体编辑部、AI 剧本孵化团队、以及需要高频产出的自由撰稿人。
 
-## 功能特性
-<img width="1978" height="1210" alt="image" src="https://github.com/user-attachments/assets/4279c8c6-0867-4e37-aa2d-6d0eaa40ce2e" />
+---
 
-### 📝 智能文章创作
-- **AI 驱动**: 使用 Google Gemini API 生成高质量文章
-- **批量生成**: 一次最多可处理 50 个标题，并发执行提高效率
-- **自定义提示词**: 支持自定义写作风格和要求，使用 `{topic}` 作为标题占位符
-- **模型选择**: 支持多种 Gemini 模型（gemini-pro、gemini-2.5-pro 等）
-- **自动标题提取**: 智能提取文章标题作为文件名
+## 目录
 
-### 🖼️ 灵活的图片配图
-- **多图片生成**:
-  - 支持每篇文章生成 1 或 3 张图片（可在配置中设置）
-  - 图片自动均匀分布在文章段落中（首段后、中间段、末段）
-  - 每张图片根据所在段落内容生成专属视觉描述
-- **多种图片来源**:
-  - Unsplash API - 高质量专业摄影图片
-  - Pexels API - 免费商用图片库
-  - Pixabay API - 多样化图片资源
-  - 本地图库 - 使用本地图片目录
-  - 用户上传 - 支持为每个标题单独上传图片
-  - ComfyUI（Stable Diffusion）- 本地生成定制配图，失败时自动回退
-- **智能图片风格管理**:
-  - 预设风格模板：写实摄影、赛博朋克、商务插画、自定义等
-  - 统一的风格提示词应用于所有生成的图片
-  - 段落智能摘要：为每个段落生成英文视觉描述，提高图片相关性
-  - 可选择专门的摘要模型或使用主写作模型
-- **图片来源优先级**: 可自定义图片获取的优先级顺序（拖拽排序）
-- **智能混合使用**: 用户上传的图片优先使用，系统自动生成剩余数量
-- **多种上传方式**:
-  - 本地文件上传
-  - 剪贴板粘贴
-  - 图片 URL 导入
-- **图片设置持久化**: 设置的图片会保存在浏览器中，刷新页面不会丢失
+1. [核心能力概览](#核心能力概览)
+2. [一分钟上手](#一分钟上手)
+3. [界面速览](#界面速览)
+4. [功能亮点](#功能亮点)
+5. [系统架构](#系统架构)
+6. [REST API 接入指南](#rest-api-接入指南)
+7. [参数配置说明](#参数配置说明)
+8. [常用工作流](#常用工作流)
+9. [疑难排查](#疑难排查)
+10. [常见问题](#常见问题)
+11. [Roadmap](#roadmap)
+12. [贡献指南](#贡献指南)
+13. [许可证](#许可证)
 
-### 📄 Word 文档生成
-- **Pandoc 转换**: 使用 Pandoc 将 Markdown 转换为 Word 文档
-- **无时间戳文件名**: 文档名称直接使用文章标题，便于识别和管理
-- **自定义输出目录**: 可在后台配置文档保存位置
-- **图片自动插入**: 配图自动插入到文章第一段后
-- **格式优化**: 支持 Markdown 格式，包括标题、粗体、段落等
+---
 
-### ⚙️ 完善的配置管理
-- **独立配置页面**: 专门的配置管理界面
-- **API 配置**:
-  - Gemini API Key 和 Base URL
-  - Unsplash、Pexels、Pixabay API Key
-  - API 测试功能，验证配置是否正确
-- **ComfyUI 配置**: 管理服务地址、Workflow JSON、采样参数、Checkpoint/VAE、Refiner 及并发能力，并支持一键测试流程
-  - 可设置生成图片数量（1 或 3 张）
-  - 提供多种预设风格模板（写实摄影、赛博朋克、商务插画等）
-  - 可设置默认的正/负向风格提示词，统一图片风格
-  - 可选择专门的段落摘要模型，提升图片与内容的匹配度
-- **本地图库配置**: 支持配置多个本地图片目录及标签
-- **输出目录配置**: 自定义文档输出位置
-- **并发任务控制**: 设置同时生成文章的数量（1-10）
+## 核心能力概览
 
-### 📊 任务管理与状态
-- **实时进度显示**: 显示生成进度条和完成百分比
-- **任务持久化**: 任务状态保存在浏览器中，刷新页面后可继续查看进度
-- **错误重试**: 生成失败的文章可以单独重试
-- **批量下载**: 生成完成后可逐个下载 Word 文档
+| 模块 | 能力 | 说明 |
+| ---- | ---- | ---- |
+| AI 写作 | 批量生成长文 | 同时提交 50 个标题，自动并发、断点续写 |
+| 图片管线 | 多源混合配图 | 支持 Gemini 图生图、ComfyUI、Unsplash、Pexels、Pixabay、本地图库、用户上传 |
+| 文档输出 | 一键生成 Word | 通过 Pandoc 将 Markdown 转成 docx，保留章节结构与图片 |
+| 任务调度 | 可视化仪表盘 | 轮询状态、进度条、重试、批量忽略、任务恢复 |
+| 历史归档 | 快速检索 | 自动列出 docx，支持一键下载和打开所在目录 |
+| 配置中心 | 图形化配置 | API 密钥、工作流、输出目录、风格模板全部可视化管理 |
 
-### 📚 历史记录
-- **历史记录页面**: 查看所有已生成的文档
-- **文件信息**: 显示文件名、大小、创建时间
-- **快速下载**: 一键下载历史文档
+---
 
-### 🎨 用户体验
-- **美观界面**: 简洁现代的 Web 界面，渐变色设计
-- **响应式设计**: 支持桌面和移动设备
-- **状态保存**: 输入的标题和配置会自动保存（24小时有效期）
-- **清空/删除操作**: 第一个输入框支持清空，其他输入框支持删除
-- **导航栏**: 快速切换写作、配置、历史记录页面
-
-## 技术栈
-
-**后端**:
-- Python 3.x
-- Flask - Web 框架
-- Flask-CORS - 跨域支持
-- Requests - HTTP 请求
-- Threading - 多线程并发处理
-
-**AI 与服务**:
-- Google Gemini API - AI 文章生成
-- Unsplash API - 图片服务
-- Pexels API - 图片服务
-- Pixabay API - 图片服务
-- Pandoc - Markdown 到 Word 转换
-
-**前端**:
-- HTML5 + CSS3
-- JavaScript (原生)
-- LocalStorage - 本地数据持久化
-- Fetch API - 异步请求
-
-## 安装步骤
-
-### 1. 环境要求
-
-- Python 3.10+
-- Pandoc (必需，用于生成 Word 文档)
-
-### 2. 安装 Pandoc
-
-**Windows**:
-下载并安装 Pandoc [<sup>2</sup>](https://pandoc.org/installing.html)，默认安装路径为 `C:\Program Files\Pandoc\pandoc.exe`
-
-**macOS**:
-```bash
-brew install pandoc
-```
-
-**Linux**:
-```bash
-sudo apt-get install pandoc  # Debian/Ubuntu
-sudo yum install pandoc      # CentOS/RHEL
-```
-
-### 3. 克隆项目
+## 一分钟上手
 
 ```bash
-git clone https://github.com/cat9999aaa/zhangfei-eat-douya.git
-cd zfcdy
-```
+# 1. 克隆代码
+git clone https://github.com/your-org/zhangfeichidouya.git
+cd zhangfeichidouya
 
-### 4. 安装 Python 依赖
-
-```bash
+# 2. 安装依赖
+python -m venv .venv
+. .venv/Scripts/activate   # Windows
+# 或 . .venv/bin/activate  # macOS / Linux
 pip install -r requirements.txt
-```
 
-### 5. 启动应用
+# 3. 安装 Pandoc
+# Windows: https://pandoc.org/installing.html
+# macOS: brew install pandoc
+# Ubuntu: sudo apt-get install pandoc
 
-```bash
+# 4. 启动服务
 python app.py
+
+# 5. 浏览器访问
+http://localhost:5000
 ```
 
-应用将在 `http://localhost:5000` 启动。
+首登进入“配置中心”，填入 Gemini API Key、选择 Pandoc 路径，保存即可开始生成。
 
-## 使用指南
+---
 
-### 首次配置
-
-1. 访问 `http://localhost:5000`
-2. 点击导航栏的"配置"进入配置页面
-3. 配置必需项：
-   - **Gemini API Key**: 从 Google AI Studio [<sup>3</sup>](https://makersuite.google.com/app/apikey) 获取
-   - **Pandoc 路径**: 设置 Pandoc 可执行文件路径
-4. 可选配置：
-   - 图片 API Keys (Unsplash/Pexels/Pixabay)
-   - 本地图库目录
-   - 输出目录
-   - 默认提示词
-5. 点击"保存配置"
-
-### 生成文章
-
-1. 在主页面输入文章标题（可添加多个）
-2. 点击"图片设置"为特定标题配置专属图片（可选）
-3. 点击"开始生成"
-4. 实时查看生成进度
-5. 完成后点击"下载 Word 文档"
-
-### 图片设置
-
-**为单个标题设置专属图片**:
-1. 点击标题后的"🖼️ 图片设置"按钮
-2. 选择图片来源：
-   - **上传图片**: 选择本地文件
-   - **剪贴板**: 复制图片后粘贴（Ctrl+V）
-   - **URL**: 输入图片链接
-3. 点击"保存设置"
-
-**全局图片策略**:
-在配置页面设置图片源优先级，系统会按顺序尝试获取图片。
-
-### 自定义写作风格
-
-在配置页面的"写作提示词配置"中：
-1. 输入自定义提示词
-2. 使用 `{topic}` 作为标题占位符
-3. 示例：
-```
-请根据标题「{topic}」写一篇800字的科技文章，要求：
-1. 语言专业且易懂
-2. 包含实际案例
-3. 结构清晰，有小标题
-```
-
-
-
-### ComfyUI 工作流准备与测试
-
-1. 在 ComfyUI 中调试好节点流程，点击右上角「队列提示 → 复制 API Prompt」，将 JSON 保存到项目目录（例如 workflows/comfyui_base.json）。
-2. 在 CLIP Text Encode（正/负向）节点的文本框中使用 `{{positive_prompt}}`、`{{negative_prompt}}` 占位符，其余自定义描述可以写在占位符前后；程序会把生成的提示词替换进去。
-3. seed / steps / CFG / 模型等参数请直接在 workflow 中设定，本程序不会再覆盖。
-4. 打开配置页面仅需填写 Workflow JSON 路径并保存。
-5. 点击「测试 ComfyUI 工作流」，系统会调用该 workflow 生成一张测试图，并返回文件路径或错误信息，方便排查。
-
-## 项目结构
+## 界面速览
 
 ```
-zfcdy-ziyong/
-├── app.py                      # Flask 主应用
-├── requirements.txt            # Python 依赖
-├── config.json                 # 配置文件（运行时生成）
-├── config.example.json         # 配置示例
-├── README.md                   # 项目文档
-├── static/                     # 静态资源
-│   ├── style.css              # 全局样式
-│   ├── script.js              # 主页 JS（已弃用）
-│   ├── write.js               # 写作页面 JS
-│   ├── config.js              # 配置页面 JS
-│   └── history.js             # 历史记录 JS
-├── templates/                  # HTML 模板
-│   ├── layout.html            # 基础布局模板
-│   ├── write.html             # 写作页面
-│   ├── config.html            # 配置页面
-│   └── history.html           # 历史记录页面
-├── output/                     # 生成的文档（默认）
-├── uploads/                    # 用户上传的图片
-└── pic/                        # 本地图库（示例）
+├─ 写作面板
+│  ├─ 批量标题输入 + 批量导入（支持 Excel/Notion 粘贴）
+│  ├─ 配图开关、任务进度条
+│  └─ 实时结果输出 + 单条/批量重试
+│
+├─ 配图设置对话框
+│  ├─ 本地上传 / 剪贴板粘贴 / 图片 URL
+│  └─ 每篇文章独立配置并持久化存储
+│
+├─ 配置中心
+│  ├─ Gemini 文本 + 图像 + 自定义 Base URL
+│  ├─ Unsplash / Pexels / Pixabay / ComfyUI 全量开关
+│  ├─ 输出目录、并发任务数、图片风格模板
+│  └─ 一键测试各项 API
+│
+└─ 历史记录
+   ├─ 自动列出 docx，展示大小与时间
+   ├─ 一键下载
+   └─ 一键打开所在目录（Toast 提示最终路径）
 ```
 
-## API 接口文档
+---
 
-### 配置管理
+## 功能亮点
 
-**获取配置**
+### 写作引擎
+
+- Gemini-2.5 文本模型驱动，系统默认提示词包含标题校验、章节结构、风格守护。
+- 支持自定义 Prompt 模板，用 `{topic}` 占位符注入标题。
+- 失联保护：任务信息持久化在浏览器，刷新后可继续查看进度。
+- 重试策略：失败项可单独重试，或创建新任务批量重跑。
+
+### 图片中台
+
+- “优先级排序”机制，支持自定义图片来源顺序。
+- 本地、上传、API、ComfyUI/Gemini 图生图混合，保证每篇文章配齐。
+- 段落摘要自动生成英文描述，提升图像语义匹配。
+- 图片持久化：配图设置保存在 LocalStorage，二次编辑无需重复上传。
+
+### 文档交付
+
+- Pandoc 转换，docx 中保留 Markdown 标题、粗体、列表、图片。
+- 输出文件名即文章标题，减少后期手工整理。
+- 支持自定义输出目录，后端打开目录时返回绝对路径，前端 Toast 告知用户。
+
+### 运维体验
+
+- 所有配置写入 `config.json`，可直接备份迁移。
+- `/api/open-output-directory` 针对无图形界面的服务器给出友好错误。
+- 下载接口发送 `Cache-Control: no-store`，避免浏览器缓存旧文档。
+
+---
+
+## 系统架构
+
 ```
-GET /api/config
+┌──────────────┐        ┌──────────────┐
+│  Browser UI   │ <----> │ Flask Backend │
+└──────────────┘        └───────┬──────┘
+      ▲   │                      │
+      │   │ fetch                │ 调度
+      │   ▼                      │
+┌──────────────┐        ┌──────────────┐
+│ LocalStorage  │        │ Task Service │
+└──────────────┘        └───────┬──────┘
+                                 │
+                                 ▼
+   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+   │ Gemini Text  │   │ Gemini Image │   │ ComfyUI / API│
+   └──────┬───────┘   └──────┬───────┘   └──────┬───────┘
+          │                  │                  │
+          ▼                  ▼                  ▼
+                   ┌────────────────────────┐
+                   │ Pandoc (Markdown->Docx)│
+                   └──────────┬────────────┘
+                              ▼
+                        Output Directory
 ```
 
-**保存配置**
-```
-POST /api/config
-Content-Type: application/json
+---
 
-{
-  "gemini_api_key": "YOUR_KEY",
-  "gemini_base_url": "https://generativelanguage.googleapis.com",
-  "pandoc_path": "C:\\Program Files\\Pandoc\\pandoc.exe",
-  "output_directory": "output",
-  "default_model": "gemini-2.5-pro",
-  "default_prompt": "自定义提示词",
-  "max_concurrent_tasks": 3,
-  "unsplash_access_key": "YOUR_KEY",
-  "pexels_api_key": "YOUR_KEY",
-  "pixabay_api_key": "YOUR_KEY",
-  "image_source_priority": ["user_uploaded", "unsplash", "local", "pexels", "pixabay"],
-  "local_image_directories": [
-    {"path": "pic", "tags": ["default"]}
-  ]
-}
-```
+## 参数配置说明
 
-### 文章生成
+### 必填
 
-**启动生成任务**
+| 配置项 | 示例 | 说明 |
+| ------ | ---- | ---- |
+| `gemini_api_key` | `sk-xxxxx` | Gemini 文本模型密钥 |
+| `pandoc_path` | `C:\Program Files\Pandoc\pandoc.exe` | Pandoc 可执行文件 |
+
+### 推荐
+
+| 配置项 | 默认 | 作用 |
+| ------ | ---- | ---- |
+| `default_model` | `gemini-2.5-pro` | 主写作模型 |
+| `default_prompt` | 详见配置页 | 定义写作结构、风格和自检 |
+| `output_directory` | `output` | Word 文档输出目录 |
+| `max_concurrent_tasks` | 3 | 同时运行的写作任务数 |
+
+### 图片相关
+
+| 配置项 | 类型 | 说明 |
+| ------ | ---- | ---- |
+| `image_source_priority` | array | 图片来源优先级，例如 `["user_uploaded","gemini_image","comfyui","unsplash"]` |
+| `local_image_directories` | array | 本地图库目录及标签，支持多个 path/tags |
+| `comfyui_settings` | object | Workflow 地址、超时时间、并发数等 |
+| `gemini_image_settings` | object | 图生图模型、风格、重试次数 |
+
+修改配置后点击“保存所有配置”，再执行“重新测试”以保证所有源可用。
+
+---
+
+## REST API 接入指南
+
+张飞吃豆芽的全部能力都暴露在 `/api` 路径下，可用于自建排班系统、脚本化调用或与第三方平台集成。以下为最常用接口。
+
+> 基础约定  
+> - 所有接口默认返回 JSON（除文件下载外）。  
+> - 出错时返回形如 `{ "error": "...", "success": false }` 的结构，并附带 HTTP 状态码。  
+> - 建议在调用前确保已在配置中心完成 Pandoc 与 API Key 的设置。
+
+### 1. 创建写作任务
+
 ```
 POST /api/generate
 Content-Type: application/json
 
 {
-  "topics": ["标题1", "标题2"],
+  "topics": ["如何提高工作效率", "AI 对未来的影响"],
   "topic_images": {
-    "标题1": {"type": "uploaded", "path": "uploads/image.jpg"},
-    "标题2": {"type": "url", "url": "https://example.com/image.jpg"}
+    "如何提高工作效率": {
+      "type": "upload",
+      "uploadedPath": "uploads/image_xxx.png"
+    }
   }
 }
-
-Response: {"success": true, "task_id": "uuid"}
 ```
 
-**查询任务状态**
-```
-GET /api/generate/status/<task_id>
+响应：
 
-Response: {
-  "status": "running",
-  "progress": 50.0,
-  "total": 2,
-  "results": [...],
-  "errors": [...]
+```json
+{
+  "success": true,
+  "task_id": "20250115-143012-9f83c2"
 }
 ```
 
-**重试失败任务**
+### 2. 轮询任务状态
+
+```
+GET /api/generate/status/<task_id>
+```
+
+示例响应：
+
+```json
+{
+  "status": "running",               // running / completed
+  "progress": 40,
+  "results": [
+    {
+      "topic": "如何提高工作效率",
+      "article_title": "XX 是如何提升效率的 7 个关键动作",
+      "filename": "XX 是如何提升效率的 7 个关键动作.docx",
+      "has_image": true,
+      "image_count": 3
+    }
+  ],
+  "errors": [
+    {
+      "topic": "AI 对未来的影响",
+      "error": "Gemini API rate limit",
+      "retry_count": 1
+    }
+  ]
+}
+```
+
+### 3. 重试失败条目
+
 ```
 POST /api/generate/retry
 
 {
-  "task_id": "uuid",
-  "topics": ["失败的标题"]
+  "task_id": "20250115-143012-9f83c2",
+  "topics": ["AI 对未来的影响"]
 }
 ```
 
-### 图片管理
+如原任务已失效，接口会返回 `{"success": true, "new_task": true, "task_id": "..."}`，可继续用新的 `task_id` 轮询。
 
-**上传图片**
-```
-POST /api/upload-image
-Content-Type: multipart/form-data
+### 4. 下载生成的 Word 文档
 
-Form Data: image=<file>
-
-Response: {
-  "success": true,
-  "filename": "image_20251016_123456.jpg",
-  "path": "uploads/image_20251016_123456.jpg"
-}
-```
-
-**列出本地图库图片**
-```
-GET /api/list-local-images
-```
-
-**列出上传的图片**
-```
-GET /api/list-uploaded-images
-```
-
-### 其他接口
-
-**获取模型列表**
-```
-GET /api/models
-```
-
-**下载文档**
 ```
 GET /api/download/<filename>
 ```
 
-**获取历史记录**
+示例：
+
+```
+GET /api/download/%E5%A6%82%E4%BD%95%E6%8F%90%E9%AB%98%E5%B7%A5%E4%BD%9C%E6%95%88%E7%8E%87.docx
+```
+
+响应为二进制流，支持 `download` 属性，也可直接写入文件。
+
+### 5. 获取历史文档
+
 ```
 GET /api/history
 ```
 
-**检查 Pandoc 配置**
-```
-GET /api/check-pandoc
-```
+响应：
 
-**测试图片 API**
-```
-POST /api/test-unsplash
-POST /api/test-pexels
-POST /api/test-pixabay
-
+```json
 {
-  "access_key": "YOUR_KEY"  // 或 api_key
+  "files": [
+    {
+      "filename": "如何提高工作效率.docx",
+      "size": 4312456,
+      "created": "2025-01-15 14:32:10",
+      "title": "如何提高工作效率"
+    }
+  ]
 }
 ```
 
-## 配置说明
+### 6. 打开输出目录
 
-### config.json 配置项
+```
+POST /api/open-output-directory
 
-| 配置项 | 类型 | 必需 | 说明 |
-|--------|------|------|------|
-| `gemini_api_key` | string | ✅ | Gemini API 密钥 |
-| `pandoc_path` | string | ✅ | Pandoc 可执行文件路径 |
-| `gemini_base_url` | string | ❌ | Gemini API 地址（默认官方地址） |
-| `output_directory` | string | ❌ | 文档输出目录（默认 output） |
-| `default_model` | string | ❌ | 默认模型（默认 gemini-pro） |
-| `default_prompt` | string | ❌ | 自定义提示词 |
-| `max_concurrent_tasks` | int | ❌ | 并发任务数（1-10，默认 3） |
-| `unsplash_access_key` | string | ❌ | Unsplash API 密钥 |
-| `pexels_api_key` | string | ❌ | Pexels API 密钥 |
-| `pixabay_api_key` | string | ❌ | Pixabay API 密钥 |
-| `image_source_priority` | array | ❌ | 图片来源优先级 |
-| `local_image_directories` | array | ❌ | 本地图库配置 |
-| `uploaded_images_dir` | string | ❌ | 上传图片保存目录 |
-| `comfyui_image_count` | int | ❌ | 每篇文章生成图片数量（1 或 3，默认 1） |
-| `comfyui_style_template` | string | ❌ | 图片风格模板（custom/realistic_photo/cyberpunk/business，默认 custom） |
-| `comfyui_positive_style` | string | ❌ | 正向风格提示词 |
-| `comfyui_negative_style` | string | ❌ | 负向风格提示词 |
-| `comfyui_summary_model` | string | ❌ | 段落摘要模型（__default__ 使用主模型，或指定其他模型） |
+{
+  "filename": "如何提高工作效率.docx"
+}
+```
 
-## 常见问题
+- 桌面环境会直接唤起文件管理器，并返回实际目录路径。
+- 无 GUI 环境会返回提示，建议只在本地/桌面部署时调用。
 
-### Q: 如何获取 API Key？
+### 7. 运行前检查
 
-**Gemini API**:
-1. 访问 Google AI Studio [<sup>3</sup>](https://makersuite.google.com/app/apikey)
-2. 登录 Google 账号
-3. 点击"Create API Key"
-4. 复制密钥
+还可以通过以下接口了解环境状态：
 
-**Unsplash API**:
-1. 访问 Unsplash Developers [<sup>4</sup>](https://unsplash.com/developers)
-2. 注册开发者账号
-3. 创建应用
-4. 获取 Access Key
+| 接口 | 方法 | 说明 |
+| ---- | ---- | ---- |
+| `/api/check-pandoc` | GET | 返回 `{ "pandoc_configured": true/false }` |
+| `/api/test-model` | POST | 测试 Gemini 文本模型是否可用 |
+| `/api/test-unsplash` / `/api/test-pexels` / `/api/test-pixabay` | POST | 验证图片 API |
+| `/api/test-comfyui` | POST | 检查 ComfyUI 工作流连通性 |
 
-**Pexels / Pixabay**: 类似流程，访问对应的开发者平台
-
-### Q: 生成文章时出现 "请先在配置页面设置 Pandoc 路径" 错误？
-
-确保已正确安装 Pandoc，并在配置页面设置正确的路径：
-- Windows: `C:\Program Files\Pandoc\pandoc.exe`
-- macOS/Linux: 通常是 `/usr/local/bin/pandoc` 或 `/usr/bin/pandoc`
-
-可以在终端运行 `which pandoc`（Linux/Mac）或 `where pandoc`（Windows）查看路径。
-
-### Q: 文档名称太长或包含特殊字符？
-
-系统会自动清理文件名中的非法字符（如 `\ / : * ? " < > |`），并限制长度为 50 个字符。
-
-### Q: 如何修改文档输出位置？
-
-在配置页面的"输出目录配置"中设置，支持相对路径和绝对路径：
-- 相对路径: `output` 或 `documents/articles`
-- 绝对路径: `D:\Documents\Articles` 或 `/home/user/documents`
-
-### Q: 图片设置后刷新页面就丢失了？
-
-新版本已支持图片设置持久化，设置的图片会保存在浏览器 LocalStorage 中，有效期 24 小时。
-
-### Q: 如何使用本地图片库？
-
-1. 在配置页面的"本地图库配置"中添加图片目录
-2. 设置目录路径和标签（如 `path: pic/nature`, `tags: nature, landscape`）
-3. 系统会根据文章主题匹配标签，随机选择图片
-4. 在"图片源优先级"中调整 "本地图库" 的位置
-
-### Q: 并发任务数量应该设置多少？
-
-建议设置为 3-5。设置过大可能触发 API 频率限制，设置过小会降低批量生成效率。
-
-### Q: 无法访问 Gemini API？
-
-- 检查网络连接
-- 确认 API Key 是否正确
-- 如果在中国大陆，可能需要使用代理或第三方中转服务
-- 可以在配置中修改 `gemini_base_url` 使用代理地址
-
-## 注意事项
-
-1. **API 配额限制**: Gemini 和图片 API 都有使用限制，注意查看配额政策
-2. **文件覆盖**: 如果生成同名文档，会覆盖原有文件
-3. **临时文件**: 从 API 下载的图片会作为临时文件保存，生成文档后自动删除
-4. **浏览器兼容性**: 建议使用现代浏览器（Chrome、Firefox、Edge）
-5. **数据安全**: API Key 保存在本地 config.json 文件中，请勿泄露
-
-## 更新日志
-
-### v2.0.0 (2025-01)
-- ✨ 新增多图片源支持（Pexels、Pixabay、本地图库）
-- ✨ 新增图片设置功能（上传、剪贴板、URL）
-- ✨ 图片设置持久化
-- ✨ 可自定义输出目录
-- ✨ 独立配置页面
-- ✨ 历史记录页面
-- ✨ 任务状态持久化
-- 🔧 移除文件名时间戳
-- 🔧 第一个输入框改为"清空"按钮
-- 🎨 界面优化和响应式设计
-
-### v1.0.0
-- 🎉 初始版本发布
-- ✨ 基于 Gemini API 的文章生成
-- ✨ Unsplash 自动配图
-- ✨ Word 文档输出
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 致谢
-
-- Google Gemini [<sup>5</sup>](https://deepmind.google/technologies/gemini/) - AI 文章生成
-- Unsplash [<sup>6</sup>](https://unsplash.com/) - 高质量图片
-- Pexels [<sup>7</sup>](https://www.pexels.com/) - 免费图片资源
-- Pixabay [<sup>8</sup>](https://pixabay.com/) - 免费图片资源
-- Flask [<sup>9</sup>](https://flask.palletsprojects.com/) - Web 框架
-- Pandoc [<sup>10</sup>](https://pandoc.org/) - 文档转换工具
-
-## 联系方式
-
-如有问题或建议，欢迎通过以下方式联系：
-- 绿泡泡Y2F0OTk5OXNzcw==  啊啊啊啊修bug好烦
+在自动化脚本中，可以先调用 `/api/check-pandoc` 与 `/api/test-model` 确认环境，再发起写作任务。
 
 ---
 
-⭐ 如果这个项目对你有帮助，请给一个 Star！
+## 常用工作流
+
+### 1. 快速选题批量生成
+1. 复制 Excel 中的标题列。
+2. 写作页点击“批量导入”，粘贴，确认展示数量。
+3. 开启“生成文章配图”开关。
+4. 点击“开始生成”，等待任务完成。
+5. 在结果列表中逐一下载 Word 文档或直接打开输出目录。
+
+### 2. 指定图片资源
+1. 在写作页添加标题后，点击对应的“图片设置”按钮。
+2. 上传本地文件或粘贴剪贴板截图。
+3. 保存设置后图标变为高亮。
+4. 生成文档时该图片优先使用，其余缺口自动由 API 填充。
+
+### 3. 二次编辑与归档
+1. 生成完毕后前往“历史记录”页面。
+2. 按时间排序查看 docx 列表。
+3. 点击“打开目录”查看 Toast 提示，确认已弹出的文件夹位置。
+4. 将 docx 拖入团队共享盘或知识库。
+
+---
+
+## 疑难排查
+
+| 现象 | 可能原因 | 处理建议 |
+| ---- | -------- | -------- |
+| 提示“请先在配置页面设置 Pandoc 路径” | 未安装或路径错误 | 安装 Pandoc，填写绝对路径，保存配置再重试 |
+| 生成卡在“等待写作服务响应” | API 限频或网络波动 | 降低并发任务数，或更换网络代理 |
+| 配图全部失败 | 图像源未配置正确 | 逐个点击“测试”按钮，确认 API Key、Workflow、代理可用 |
+| Word 文档打不开 | Pandoc 转换失败 | 检查 `app/services/document_service.py` 日志，确认 Markdown 是否含非法字符 |
+| 打开目录无反应 | 服务器无桌面环境 | 接口会返回错误信息，请在历史记录或结果列表中复制输出路径，手动打开 |
+
+---
+
+## 常见问题
+
+**Q: 可以自定义写作风格吗？**  
+A: 可以。在配置中心的“默认提示词”里编辑 Markdown 提示模板，使用 `{topic}` 代表标题，还可以引导模型输出特定章节、语气、长度。
+
+**Q: 任务刷新后还能继续吗？**  
+A: 浏览器会缓存任务 ID 与标题列表，刷新后自动恢复轮询。若后台任务已完成，会直接显示最终结果。
+
+**Q: 如何接入第三方中转服务？**  
+A: 将 `gemini_base_url` 改为你的中转地址，文本与图像模块均会使用该 Base URL。务必确保兼容 Google Gemini API 协议。
+
+**Q: 可以和企业知识库联动吗？**  
+A: 当前版本聚焦生产 Word 文档。如需扩展，可在生成后通过脚本上传到 Notion / Confluence / 飞书，欢迎提交 PR。
+
+---
+
+## Roadmap
+
+- [ ] 增加 Markdown + HTML 多格式导出
+- [ ] 支持自定义模板（题图、封面、版权信息）
+- [ ] 引入账号权限体系，支持团队协作
+- [ ] 任务结果统计与仪表盘
+- [ ] 多语言写作模式（英文、日文等）
+
+想要的功能不在列表中？欢迎提 Issue 告诉我们。
+
+---
+
+## 贡献指南
+
+1. Fork 仓库，创建特性分支：
+   ```bash
+   git checkout -b feature/awesome
+   ```
+2. 完成开发后运行自测（启动 Flask，试跑写作和配图）。
+3. 提交 PR 时请包含：
+   - 变更说明
+   - 复现与测试步骤
+   - 截图或命令行输出（如适用）
+
+我们欢迎任何改进：UI 优化、性能调优、接入更多数据源、改写提示词等。
+
+---
+
+## 许可证
+
+本项目基于 MIT License 开源。你可以自由修改、分发，但请保留原始许可证与署名。
+
+---
+
+如果张飞吃豆芽帮到了你，欢迎 Star 支持，也欢迎在 Issues 留言分享你的生产力案例。让我们把“AI 写稿 + 配图 + 分发”变成真正的一键流程。
