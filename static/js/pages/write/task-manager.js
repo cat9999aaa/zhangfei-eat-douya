@@ -201,7 +201,10 @@ class TaskManager {
         item.dataset.topic = result.topic;
         item.innerHTML = `
             <div class="result-title">✓ ${result.article_title}</div>
-            <a href="/api/download/${result.filename}" class="download-btn" download>📥 下载 Word 文档</a>
+            <div class="result-actions">
+                <a href="/api/download/${result.filename}" class="download-btn btn btn-primary btn-small" download>📥 下载 Word 文档</a>
+                <button type="button" class="btn btn-secondary btn-small open-directory-btn" data-filename="${result.filename}">📂 打开目录</button>
+            </div>
         `;
         return item;
     }
@@ -240,6 +243,7 @@ class TaskManager {
         const target = event.target;
         if (target.classList.contains('retry-btn')) await this.handleRetry(target);
         if (target.classList.contains('discard-btn')) this.handleDiscard(target);
+        if (target.classList.contains('open-directory-btn')) await this.openDocumentDirectory(target.dataset.filename);
     }
 
     async handleRetry(button) {
@@ -373,6 +377,21 @@ class TaskManager {
     setGenerateButtonState(disabled, text) {
         this.generateBtn.disabled = disabled;
         if (text) this.generateBtn.textContent = text;
+    }
+
+    async openDocumentDirectory(filename) {
+        if (!filename) return;
+        try {
+            const result = await api.openDocumentDirectory(filename);
+            if (result && result.success) {
+                toast.success('已尝试打开文档目录');
+            } else {
+                toast.error('打开目录失败，未返回成功状态');
+            }
+        } catch (error) {
+            const message = error && error.message ? error.message : '未知错误';
+            toast.error(`打开目录失败: ${message}`);
+        }
     }
 }
 

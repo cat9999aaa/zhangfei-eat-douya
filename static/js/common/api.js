@@ -201,6 +201,10 @@ class API {
         return this.get('/history');
     }
 
+    async openDocumentDirectory(filename) {
+        return this.post('/open-output-directory', { filename });
+    }
+
     // Pandoc检查
     async checkPandoc() {
         return this.get('/check-pandoc');

@@ -6,6 +6,7 @@
 class ConfigPageApp {
     constructor() {
         this.initialized = false;
+        this.isSaving = false;
     }
 
     /**
@@ -407,13 +408,18 @@ class ConfigPageApp {
      */
     async handleSave() {
         const saveBtn = document.getElementById('saveConfig');
-        const originalText = saveBtn.textContent;
+        if (!saveBtn) return;
+        if (this.isSaving) return;
+
+        const originalText = saveBtn.dataset.originalText || saveBtn.textContent;
+        saveBtn.dataset.originalText = originalText;
 
         // 获取图片目录和优先级
         const imageDirs = this.imageDirManager ? this.imageDirManager.getDirectories() : [];
         const imagePriority = this.prioritySorter ? this.prioritySorter.getPriority() : [];
 
         try {
+            this.isSaving = true;
             saveBtn.disabled = true;
             saveBtn.textContent = '保存中...';
 
@@ -438,8 +444,9 @@ class ConfigPageApp {
         } catch (error) {
             console.error('保存配置失败:', error);
         } finally {
+            this.isSaving = false;
             saveBtn.disabled = false;
-            saveBtn.textContent = originalText;
+            saveBtn.textContent = saveBtn.dataset.originalText || originalText || '💾 保存所有配置';
         }
     }
 

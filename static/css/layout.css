@@ -9,6 +9,7 @@
     top: 0;
     z-index: var(--z-sticky);
     transition: box-shadow var(--transition-fast);
+    flex-shrink: 0;
 }
 
 .navbar.scrolled {
@@ -86,6 +87,8 @@
     border-radius: var(--radius-large);
     box-shadow: var(--shadow-large);
     animation: fadeIn 0.5s ease-out;
+    flex: 1 0 auto;
+    width: clamp(280px, 90%, 1000px);
 }
 
 .container {
@@ -155,6 +158,7 @@ footer {
     font-size: var(--font-size-sm);
     margin-top: var(--spacing-xl);
     border-top: 1px solid var(--border-light);
+    flex-shrink: 0;
 }
 
 footer a {
@@ -210,6 +214,17 @@ footer a:hover {
 .result-item.error {
     background: var(--error-light);
     border-left-color: var(--error-color);
+}
+
+.result-item .result-actions {
+    margin-top: var(--spacing-sm);
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.result-item .result-actions .btn {
+    flex-shrink: 0;
 }
 
 .result-title {

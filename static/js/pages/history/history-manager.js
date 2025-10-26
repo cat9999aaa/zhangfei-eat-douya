@@ -73,6 +73,9 @@ class HistoryManager {
                 <button class="copy-filename-btn btn btn-secondary btn-small" data-filename="${file.filename}">
                     📋 复制文件名
                 </button>
+                <button class="open-directory-btn btn btn-secondary btn-small" data-filename="${file.filename}" type="button">
+                    📂 打开目录
+                </button>
             </div>
         `;
 
@@ -88,7 +91,28 @@ class HistoryManager {
             }
         });
 
+        const openDirBtn = item.querySelector('.open-directory-btn');
+        openDirBtn.addEventListener('click', async () => {
+            const filename = openDirBtn.dataset.filename;
+            await this.openDocumentDirectory(filename);
+        });
+
         return item;
+    }
+
+    async openDocumentDirectory(filename) {
+        if (!filename) return;
+        try {
+            const result = await api.openDocumentDirectory(filename);
+            if (result && result.success) {
+                toast.success('已尝试打开文档目录');
+            } else {
+                toast.error('打开目录失败，未返回成功状态');
+            }
+        } catch (error) {
+            const message = error && error.message ? error.message : '未知错误';
+            toast.error(`打开目录失败: ${message}`);
+        }
     }
 
     /**

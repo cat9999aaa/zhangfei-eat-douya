@@ -328,12 +328,38 @@ def execute_generation_task(task_id, topics, config):
             try:
                 result = future.result()
                 with task_lock:
-                    generation_tasks[task_id]['results'].append(result)
+                    task = generation_tasks[task_id]
+
+                    # ✅ 防止重复：检查该主题是否已经成功生成过
+                    existing_topics = {r['topic'] for r in task['results']}
+                    if topic in existing_topics:
+                        print(f"⚠️  警告: 主题 '{topic}' 已经成功生成过，跳过重复结果")
+                        continue
+
+                    # 添加新结果
+                    task['results'].append(result)
+                    print(f"✓ 主题 '{topic}' 生成成功并记录")
+
             except Exception as e:
                 with task_lock:
                     task = generation_tasks[task_id]
                     retry_count = task.get('retry_counts', {}).get(topic, 0)
-                    task['errors'].append({'topic': topic, 'error': str(e), 'retry_count': retry_count})
+
+                    # ✅ 防止重复错误记录
+                    existing_error_topics = {err['topic'] for err in task['errors']}
+                    if topic in existing_error_topics:
+                        # 更新现有错误记录
+                        for err in task['errors']:
+                            if err['topic'] == topic:
+                                err['error'] = str(e)
+                                err['retry_count'] = retry_count
+                                break
+                        print(f"✗ 主题 '{topic}' 再次失败，已更新错误记录")
+                    else:
+                        # 添加新错误记录
+                        task['errors'].append({'topic': topic, 'error': str(e), 'retry_count': retry_count})
+                        print(f"✗ 主题 '{topic}' 生成失败并记录")
+
             finally:
                 with task_lock:
                     task = generation_tasks[task_id]
@@ -357,12 +383,30 @@ def execute_generation_task(task_id, topics, config):
                     'retry_count': retry_count
                 })
 
+        # ✅ 安全检查：确保没有重复
+        unique_success_topics = {r['topic'] for r in task['results']}
+        unique_error_topics = {e['topic'] for e in task['errors']}
+
+        if len(task['results']) != len(unique_success_topics):
+            print(f"⚠️  警告: 检测到 {len(task['results']) - len(unique_success_topics)} 个重复的成功结果，正在去重...")
+            # 去重：保留每个主题的第一个结果
+            seen = set()
+            deduped_results = []
+            for r in task['results']:
+                if r['topic'] not in seen:
+                    seen.add(r['topic'])
+                    deduped_results.append(r)
+            task['results'] = deduped_results
+            print(f"✓ 去重完成，剩余 {len(task['results'])} 个唯一结果")
+
         # 重新计算最终进度并检查是否完成
         completed_count = len(task['results']) + len(task['errors'])
         task['progress'] = (completed_count / task['total']) * 100 if task['total'] > 0 else 0
         if completed_count >= task['total']:
             task['status'] = 'completed'
             print(f"✓ 任务完成! 总结果: {len(task['results'])} 成功, {len(task['errors'])} 失败")
+            print(f"  成功主题: {sorted([r['topic'] for r in task['results']])}")
+            print(f"  失败主题: {sorted([e['topic'] for e in task['errors']])}")
 
 def create_generation_task(topics, topic_images, config):
     task_id = str(uuid.uuid4())
@@ -376,23 +420,54 @@ def get_task_status(task_id):
         return generation_tasks.get(task_id, {}).copy()
 
 def retry_failed_topics_in_task(task_id, topics_to_retry, config):
+    """重试失败的主题"""
     with task_lock:
         task = generation_tasks.get(task_id)
         if not task:
+            print(f"⚠️  任务 {task_id} 不存在，创建新任务")
             new_task_id = str(uuid.uuid4())
             new_retry_counts = {topic: 1 for topic in topics_to_retry}
-            generation_tasks[new_task_id] = {'task_id': new_task_id, 'status': 'running', 'total': len(topics_to_retry), 'progress': 0, 'results': [], 'errors': [], 'topic_images': {}, 'retry_counts': new_retry_counts, 'created_at': datetime.now().isoformat()}
+            generation_tasks[new_task_id] = {
+                'task_id': new_task_id,
+                'status': 'running',
+                'total': len(topics_to_retry),
+                'progress': 0,
+                'results': [],
+                'errors': [],
+                'topic_images': {},
+                'retry_counts': new_retry_counts,
+                'created_at': datetime.now().isoformat()
+            }
             executor.submit(execute_generation_task, new_task_id, topics_to_retry, config)
             return {'new_task': True, 'task_id': new_task_id}
 
-        task['errors'] = [e for e in task['errors'] if e['topic'] not in topics_to_retry]
-        if 'retry_counts' not in task: task['retry_counts'] = {}
-        for topic in topics_to_retry:
+        # ✅ 过滤：只重试真正失败的主题（排除已成功的）
+        existing_success_topics = {r['topic'] for r in task['results']}
+        actual_failed_topics = [t for t in topics_to_retry if t not in existing_success_topics]
+
+        if not actual_failed_topics:
+            print(f"⚠️  所有要重试的主题都已成功，无需重试")
+            return {'success': True, 'task_id': task_id, 'skipped': True}
+
+        if len(actual_failed_topics) < len(topics_to_retry):
+            skipped = set(topics_to_retry) - set(actual_failed_topics)
+            print(f"⚠️  跳过已成功的主题: {skipped}")
+
+        # 从错误列表中移除要重试的主题
+        task['errors'] = [e for e in task['errors'] if e['topic'] not in actual_failed_topics]
+
+        # 更新重试计数
+        if 'retry_counts' not in task:
+            task['retry_counts'] = {}
+        for topic in actual_failed_topics:
             task['retry_counts'][topic] = task['retry_counts'].get(topic, 0) + 1
 
+        # 设置任务状态
         task['status'] = 'running'
         completed_count = len(task['results']) + len(task['errors'])
         task['progress'] = (completed_count / task['total']) * 100 if task['total'] > 0 else 0
 
-    executor.submit(execute_generation_task, task_id, topics_to_retry, config)
+        print(f"🔄 重试 {len(actual_failed_topics)} 个失败主题: {actual_failed_topics}")
+
+    executor.submit(execute_generation_task, task_id, actual_failed_topics, config)
     return {'success': True, 'task_id': task_id}

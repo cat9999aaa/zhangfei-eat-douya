@@ -4,6 +4,8 @@ import os
 from flask import Blueprint, request, jsonify, send_file
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import subprocess
+import sys
 
 from app.config.loader import load_config
 from app.config import ALLOWED_EXTENSIONS
@@ -198,10 +200,51 @@ def download_file(filename):
     """下载生成的文档"""
     config = load_config()
     output_dir = config.get('output_directory', 'output')
-    filepath = os.path.join(output_dir, filename)
+    if not os.path.isabs(output_dir):
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        output_dir = os.path.abspath(os.path.join(base_dir, output_dir))
+    safe_filename = os.path.basename(filename)
+    if safe_filename != filename:
+        return jsonify({'error': '非法的文件名'}), 400
+    filepath = os.path.join(output_dir, safe_filename)
     if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True)
+        return send_file(filepath, as_attachment=True, download_name=safe_filename, max_age=0)
     return jsonify({'error': '文件不存在'}), 404
+
+
+@main_api_bp.route('/open-output-directory', methods=['POST'])
+def open_output_directory():
+    """打开生成文档所在的目录"""
+    config = load_config()
+    output_dir = config.get('output_directory', 'output')
+    if not os.path.isabs(output_dir):
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        output_dir = os.path.abspath(os.path.join(base_dir, output_dir))
+
+    data = request.json or {}
+    filename = data.get('filename', '')
+
+    target_dir = output_dir
+    if filename:
+        safe_filename = os.path.basename(filename)
+        if safe_filename != filename:
+            return jsonify({'success': False, 'error': '非法的文件名'}), 400
+        target_dir = os.path.join(output_dir, safe_filename)
+        target_dir = os.path.dirname(target_dir)
+
+    if not os.path.exists(target_dir):
+        return jsonify({'success': False, 'error': '目录不存在'}), 404
+
+    try:
+        if sys.platform.startswith('win'):
+            os.startfile(target_dir)  # type: ignore[attr-defined]
+        elif sys.platform == 'darwin':
+            subprocess.Popen(['open', target_dir])
+        else:
+            subprocess.Popen(['xdg-open', target_dir])
+        return jsonify({'success': True})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': f'无法打开目录: {exc}'}), 500
 
 
 # ====================

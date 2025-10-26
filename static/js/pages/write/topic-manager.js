@@ -18,6 +18,7 @@ class TopicManager {
         this.batchImportModal = document.getElementById('batchImportModal');
         this.batchImportTextarea = document.getElementById('batchImportTextarea');
         this.importCount = document.getElementById('importCount');
+        this.importCountHint = document.getElementById('importCounterHint');
         this.confirmImportBtn = document.getElementById('confirmImportBtn');
         this.cancelImportBtn = document.getElementById('cancelImportBtn');
         this.closeBatchImportModal = document.getElementById('closeBatchImportModal');
@@ -272,21 +273,42 @@ class TopicManager {
      * 更新导入数量显示
      */
     updateImportCount() {
+        if (!this.importCount) return;
+
         const text = this.batchImportTextarea.value;
-        const lines = text.split('\n')
+        const lines = text
+            .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0);
 
-        const count = Math.min(lines.length, this.maxTopics);
-        this.importCount.textContent = count;
+        const total = lines.length;
+        const count = Math.min(total, this.maxTopics);
+        const displayValue = `${count}/${this.maxTopics}`;
 
-        // 超过限制时提示
-        if (lines.length > this.maxTopics) {
-            this.importCount.style.color = 'var(--error-color)';
-            this.importCount.textContent = `${count} (超出部分将被忽略)`;
+        let state = 'normal';
+        let hint = '';
+
+        if (total === 0) {
+            state = 'empty';
+            hint = '粘贴或输入标题即可快速创建任务';
+        } else if (total < this.maxTopics) {
+            state = 'normal';
+            hint = `还可以再添加 ${this.maxTopics - total} 条标题`;
+        } else if (total === this.maxTopics) {
+            state = 'limit';
+            hint = '已达到 50 条上限';
         } else {
-            this.importCount.style.color = 'var(--primary-color)';
-            this.importCount.textContent = count;
+            state = 'warning';
+            hint = `已超过 ${this.maxTopics} 条，超出部分将被忽略`;
+        }
+
+        this.importCount.dataset.state = state;
+        this.importCount.textContent = displayValue;
+        this.importCount.title = total > this.maxTopics ? `已输入 ${total} 条，超出部分将被忽略` : '';
+
+        if (this.importCountHint) {
+            this.importCountHint.dataset.state = state;
+            this.importCountHint.textContent = hint;
         }
     }
 
