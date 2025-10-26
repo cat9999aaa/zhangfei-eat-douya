@@ -66,6 +66,8 @@ http://localhost:5000
 
 ## 界面速览
 
+[![演示视频](./cover.png)](https://www.bilibili.com/video/BV1x2xczcErB)
+
 ```
 ├─ 写作面板
 │  ├─ 批量标题输入 + 批量导入（支持 Excel/Notion 粘贴）
