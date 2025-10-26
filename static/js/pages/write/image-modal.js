@@ -7,6 +7,8 @@ class ImageModal {
     constructor(options = {}) {
         this.stateManager = options.stateManager;
         this.topicManager = options.topicManager;
+        this.handleKeydown = this.handleKeydown.bind(this);
+        this.lastFocusedElement = null;
 
         // 模态框元素
         this.modal = document.getElementById('imageModal');
@@ -79,12 +81,15 @@ class ImageModal {
                 this.close();
             }
         });
+
+        document.addEventListener('keydown', this.handleKeydown);
     }
 
     /**
      * 打开模态框
      */
     open(topicIndex) {
+        if (this.modal.getAttribute('aria-hidden') === 'false') return;
         const wrapper = document.querySelector(`.topic-input-wrapper[data-index="${topicIndex}"]`);
         if (!wrapper) return;
 
@@ -102,7 +107,12 @@ class ImageModal {
             this.loadExistingImage(imageData);
         }
 
-        this.modal.style.display = 'flex';
+        const activeElement = document.activeElement;
+        this.lastFocusedElement = activeElement instanceof HTMLElement ? activeElement : null;
+        Utils.toggleModalScrollLock(true);
+        this.modal.classList.remove('fade-out');
+        this.modal.hidden = false;
+        this.modal.setAttribute('aria-hidden', 'false');
         this.modal.classList.add('fade-in');
     }
 
@@ -110,12 +120,19 @@ class ImageModal {
      * 关闭模态框
      */
     close() {
+        if (this.modal.getAttribute('aria-hidden') === 'true') return;
         this.modal.classList.add('fade-out');
         setTimeout(() => {
-            this.modal.style.display = 'none';
+            this.modal.setAttribute('aria-hidden', 'true');
+            this.modal.hidden = true;
             this.modal.classList.remove('fade-in', 'fade-out');
             this.currentTopicIndex = null;
             this.currentImageData = null;
+            Utils.toggleModalScrollLock(false);
+            if (this.lastFocusedElement && typeof this.lastFocusedElement.focus === 'function') {
+                this.lastFocusedElement.focus();
+            }
+            this.lastFocusedElement = null;
         }, 300);
     }
 
@@ -392,6 +409,13 @@ class ImageModal {
      */
     hideStatus() {
         this.modalStatus.style.display = 'none';
+    }
+
+    handleKeydown(event) {
+        if (event.key === 'Escape' && this.modal.getAttribute('aria-hidden') === 'false') {
+            event.preventDefault();
+            this.close();
+        }
     }
 }
 

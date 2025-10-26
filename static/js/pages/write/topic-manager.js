@@ -22,6 +22,8 @@ class TopicManager {
         this.confirmImportBtn = document.getElementById('confirmImportBtn');
         this.cancelImportBtn = document.getElementById('cancelImportBtn');
         this.closeBatchImportModal = document.getElementById('closeBatchImportModal');
+        this.handleModalKeydown = this.handleModalKeydown.bind(this);
+        this.lastFocusedElement = null;
 
         this.init();
     }
@@ -50,6 +52,8 @@ class TopicManager {
                 this.closeBatchImport();
             }
         });
+
+        document.addEventListener('keydown', this.handleModalKeydown);
     }
 
     /**
@@ -254,9 +258,14 @@ class TopicManager {
      * 打开批量导入弹窗
      */
     openBatchImportModal() {
+        if (this.batchImportModal.getAttribute('aria-hidden') === 'false') return;
+        const activeElement = document.activeElement;
+        this.lastFocusedElement = activeElement instanceof HTMLElement ? activeElement : null;
         this.batchImportTextarea.value = '';
         this.updateImportCount();
-        this.batchImportModal.style.display = 'flex';
+        Utils.toggleModalScrollLock(true);
+        this.batchImportModal.hidden = false;
+        this.batchImportModal.setAttribute('aria-hidden', 'false');
         this.batchImportTextarea.focus();
     }
 
@@ -264,9 +273,16 @@ class TopicManager {
      * 关闭批量导入弹窗
      */
     closeBatchImport() {
-        this.batchImportModal.style.display = 'none';
+        if (this.batchImportModal.getAttribute('aria-hidden') === 'true') return;
+        this.batchImportModal.setAttribute('aria-hidden', 'true');
+        this.batchImportModal.hidden = true;
         this.batchImportTextarea.value = '';
         this.updateImportCount();
+        Utils.toggleModalScrollLock(false);
+        if (this.lastFocusedElement && typeof this.lastFocusedElement.focus === 'function') {
+            this.lastFocusedElement.focus();
+        }
+        this.lastFocusedElement = null;
     }
 
     /**
@@ -309,6 +325,13 @@ class TopicManager {
         if (this.importCountHint) {
             this.importCountHint.dataset.state = state;
             this.importCountHint.textContent = hint;
+        }
+    }
+
+    handleModalKeydown(event) {
+        if (event.key === 'Escape' && this.batchImportModal.getAttribute('aria-hidden') === 'false') {
+            event.preventDefault();
+            this.closeBatchImport();
         }
     }
 

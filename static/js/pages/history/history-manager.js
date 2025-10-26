@@ -105,9 +105,12 @@ class HistoryManager {
         try {
             const result = await api.openDocumentDirectory(filename);
             if (result && result.success) {
-                toast.success('已尝试打开文档目录');
+                const directory = result.path || '';
+                const message = directory ? `已打开目录：${directory}` : '已在文件管理器中打开目录';
+                toast.success(message);
             } else {
-                toast.error('打开目录失败，未返回成功状态');
+                const errorMsg = result && result.error ? result.error : '打开目录失败，未返回成功状态';
+                toast.error(errorMsg);
             }
         } catch (error) {
             const message = error && error.message ? error.message : '未知错误';

@@ -1,11 +1,13 @@
 """主要API路由（图片、生成、历史记录等）"""
 
 import os
-from flask import Blueprint, request, jsonify, send_file
-from datetime import datetime
-from werkzeug.utils import secure_filename
+import shutil
 import subprocess
 import sys
+from datetime import datetime
+
+from flask import Blueprint, request, jsonify, send_file
+from werkzeug.utils import secure_filename
 
 from app.config.loader import load_config
 from app.config import ALLOWED_EXTENSIONS
@@ -208,7 +210,20 @@ def download_file(filename):
         return jsonify({'error': '非法的文件名'}), 400
     filepath = os.path.join(output_dir, safe_filename)
     if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True, download_name=safe_filename, max_age=0)
+        response = send_file(
+            filepath,
+            as_attachment=True,
+            download_name=safe_filename,
+            max_age=0,
+            conditional=True
+        )
+        response.cache_control.no_store = True  # type: ignore[attr-defined]
+        response.cache_control.max_age = 0  # type: ignore[attr-defined]
+        response.cache_control.must_revalidate = True  # type: ignore[attr-defined]
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     return jsonify({'error': '文件不存在'}), 404
 
 
@@ -236,13 +251,21 @@ def open_output_directory():
         return jsonify({'success': False, 'error': '目录不存在'}), 404
 
     try:
+        resolved_dir = os.path.abspath(target_dir)
         if sys.platform.startswith('win'):
             os.startfile(target_dir)  # type: ignore[attr-defined]
         elif sys.platform == 'darwin':
-            subprocess.Popen(['open', target_dir])
+            subprocess.Popen(['open', target_dir], close_fds=True)
         else:
-            subprocess.Popen(['xdg-open', target_dir])
-        return jsonify({'success': True})
+            if not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
+                raise EnvironmentError('当前环境未启用图形界面，请手动前往输出目录')
+            opener = shutil.which('xdg-open')
+            if not opener:
+                raise EnvironmentError('系统缺少 xdg-open，无法自动打开目录')
+            subprocess.Popen([opener, target_dir], close_fds=True)
+        return jsonify({'success': True, 'path': resolved_dir})
+    except EnvironmentError as exc:
+        return jsonify({'success': False, 'error': str(exc)})
     except Exception as exc:
         return jsonify({'success': False, 'error': f'无法打开目录: {exc}'}), 500
 

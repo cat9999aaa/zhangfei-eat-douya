@@ -273,6 +273,22 @@ const Utils = {
     },
 
     /**
+     * 控制模态框打开时的滚动锁定
+     * @param {boolean} lock - 是否锁定滚动
+     */
+    toggleModalScrollLock(lock) {
+        const className = 'write-modal-locked';
+        if (lock) {
+            document.body.classList.add(className);
+            return;
+        }
+        const hasVisibleModal = document.querySelector('.write-modal[aria-hidden=\"false\"]');
+        if (!hasVisibleModal) {
+            document.body.classList.remove(className);
+        }
+    },
+
+    /**
      * 全屏切换
      */
     toggleFullscreen() {
