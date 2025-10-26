@@ -1,10 +1,10 @@
 # 张飞吃豆芽 - AI 智能文章生成器
 
 一个功能强大的基于 Google Gemini API 的智能文章创作工具，支持批量生成文章、自动配图、自定义写作风格，并输出高质量的 Word 文档。
-
-!项目截图 <sup>1</sup> [<sup>1</sup>](screenshot.png)
+<img width="2730" height="1535" alt="image" src="https://github.com/user-attachments/assets/18dc1a5f-3ae6-449b-a890-add62b3618ab" />
 
 ## 功能特性
+<img width="1978" height="1210" alt="image" src="https://github.com/user-attachments/assets/4279c8c6-0867-4e37-aa2d-6d0eaa40ce2e" />
 
 ### 📝 智能文章创作
 - **AI 驱动**: 使用 Google Gemini API 生成高质量文章
