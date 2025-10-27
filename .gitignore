@@ -184,6 +184,6 @@ cython_debug/
 # 配置和缓存文件
 config.json
 models_cache.json
-.claude
+.claude/
 uploads/
 output/
