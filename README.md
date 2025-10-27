@@ -39,8 +39,8 @@
 
 ```bash
 # 1. 克隆代码
-git clone https://github.com/your-org/zhangfeichidouya.git
-cd zhangfeichidouya
+git clone https://github.com/your-org/zhangfei-eat-douya.git
+cd zhangfei-eat-douya
 
 # 2. 安装依赖
 python -m venv .venv
