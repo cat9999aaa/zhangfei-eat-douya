@@ -182,6 +182,8 @@ cython_debug/
 
 
 # 配置和缓存文件
+.gitattributes
+.gitignore
 config.json
 models_cache.json
 .claude/
