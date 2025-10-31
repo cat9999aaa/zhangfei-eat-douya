@@ -89,6 +89,14 @@ class ConfigManager {
             elements.maxConcurrentTasks.value = config.max_concurrent_tasks;
         }
 
+        // Temperature 和 Top-P
+        if (config.temperature !== undefined) {
+            elements.temperature.value = config.temperature;
+        }
+        if (config.top_p !== undefined) {
+            elements.topP.value = config.top_p;
+        }
+
         // ComfyUI 配置
         this.applyComfyuiSettings(config.comfyui_settings);
 
@@ -268,6 +276,8 @@ class ConfigManager {
             output_directory: elements.outputDirectory.value || 'output',
             default_model: elements.defaultModel.value,
             default_prompt: elements.defaultPrompt.value,
+            temperature: parseFloat(elements.temperature.value) || 1.0,
+            top_p: parseFloat(elements.topP.value) || 0.95,
             max_concurrent_tasks: parseInt(elements.maxConcurrentTasks.value) || 3,
             comfyui_settings: this.collectComfyuiSettings(),
             comfyui_image_count: parseInt(elements.comfyuiImageCount.value) || 1,
@@ -330,6 +340,8 @@ class ConfigManager {
         elements.outputDirectory.value = 'output';
         elements.defaultModel.value = 'gemini-pro';
         elements.defaultPrompt.value = '';
+        elements.temperature.value = 1.0;
+        elements.topP.value = 0.95;
         elements.maxConcurrentTasks.value = 3;
 
         this.applyComfyuiSettings(this.comfyuiDefaults);
@@ -452,6 +464,8 @@ class ConfigManager {
             outputDirectory: document.getElementById('outputDirectory'),
             defaultModel: document.getElementById('defaultModel'),
             defaultPrompt: document.getElementById('defaultPrompt'),
+            temperature: document.getElementById('temperature'),
+            topP: document.getElementById('topP'),
             maxConcurrentTasks: document.getElementById('maxConcurrentTasks'),
             comfyuiEnabled: document.getElementById('comfyuiEnabled'),
             comfyuiServerUrl: document.getElementById('comfyuiServerUrl'),

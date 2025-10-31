@@ -134,8 +134,14 @@ class API {
     }
 
     // 测试API
-    async testModel(modelName, apiKey, baseUrl) {
-        return this.post('/test-model', { model_name: modelName, api_key: apiKey, base_url: baseUrl });
+    async testModel(modelName, apiKey, baseUrl, temperature = 1.0, topP = 0.95) {
+        return this.post('/test-model', {
+            model_name: modelName,
+            api_key: apiKey,
+            base_url: baseUrl,
+            temperature: temperature,
+            top_p: topP
+        });
     }
 
     async testUnsplash(accessKey) {

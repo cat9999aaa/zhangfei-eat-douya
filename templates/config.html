@@ -92,6 +92,28 @@
                             </div>
                             <div id="defaultModelTestResult" class="test-result"></div>
                         </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="temperature">
+                                <span class="icon">🌡️</span>
+                                Temperature（温度）
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="temperature" value="1.0" min="0" max="2" step="0.1">
+                            </div>
+                            <p class="config-item-help">控制输出的随机性，范围 0-2。值越高越随机，值越低越确定（默认：1.0）</p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="topP">
+                                <span class="icon">🎯</span>
+                                Top-P（核采样）
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="topP" value="0.95" min="0" max="1" step="0.05">
+                            </div>
+                            <p class="config-item-help">控制输出的多样性，范围 0-1。值越高考虑的词汇越多（默认：0.95）</p>
+                        </div>
                     </div>
                 </div>
 

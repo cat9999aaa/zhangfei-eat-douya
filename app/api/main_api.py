@@ -379,6 +379,8 @@ def test_model():
     model_name = data.get('model_name', '')
     api_key = data.get('api_key', '')
     base_url = data.get('base_url', 'https://generativelanguage.googleapis.com')
+    temperature = data.get('temperature', 1.0)
+    top_p = data.get('top_p', 0.95)
 
     if not model_name:
         return jsonify({'success': False, 'error': '请提供模型名称'}), 400
@@ -390,9 +392,14 @@ def test_model():
             return jsonify({'success': False, 'error': '请先配置 Gemini API Key'}), 400
 
     try:
-        success, result = test_gemini_model(model_name, api_key, base_url)
+        success, result, params_info = test_gemini_model(model_name, api_key, base_url, temperature, top_p)
         if success:
-            return jsonify({'success': True, 'message': '模型测试成功', 'reply': result})
+            return jsonify({
+                'success': True,
+                'message': '模型测试成功',
+                'reply': result,
+                'params': params_info
+            })
         else:
             return jsonify({'success': False, 'error': result})
     except Exception as e:

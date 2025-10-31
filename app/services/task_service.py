@@ -258,11 +258,14 @@ def execute_single_article_generation(topic, config, user_uploaded_images=None):
     pandoc_path = config.get('pandoc_path', '')
     model_name = config.get('default_model') or 'gemini-pro'
     custom_prompt = config.get('default_prompt', '')
+    temperature = config.get('temperature', 1.0)
+    top_p = config.get('top_p', 0.95)
     enable_image = config.get('enable_image', True)
     target_image_count = config.get('comfyui_image_count', 1)
 
     print(f"📄 生成文章内容...")
-    article = generate_article_with_gemini(topic, gemini_api_key, gemini_base_url, model_name, custom_prompt)
+    print(f"   使用参数: Temperature={temperature}, Top-P={top_p}")
+    article = generate_article_with_gemini(topic, gemini_api_key, gemini_base_url, model_name, custom_prompt, temperature, top_p)
     article_title = extract_article_title(article)
     print(f"✓ 文章生成完成: 《{article_title}》")
 

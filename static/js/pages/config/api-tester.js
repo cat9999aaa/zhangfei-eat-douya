@@ -209,6 +209,8 @@ class APITester {
         const modelName = document.getElementById('defaultModel').value;
         const apiKey = document.getElementById('geminiApiKey').value || '';
         const baseUrl = document.getElementById('geminiBaseUrl').value || 'https://generativelanguage.googleapis.com';
+        const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
+        const topP = parseFloat(document.getElementById('topP').value) || 0.95;
         const resultEl = document.getElementById('defaultModelTestResult');
 
         if (!modelName) {
@@ -222,10 +224,12 @@ class APITester {
         this.showTestResult(resultEl, '正在测试模型...', 'info');
 
         try {
-            const result = await api.testModel(modelName, apiKey, baseUrl);
+            const result = await api.testModel(modelName, apiKey, baseUrl, temperature, topP);
 
             if (result.success) {
-                this.showTestResult(resultEl, `✓ ${result.message}\n回复: ${result.reply}`, 'success');
+                const paramsInfo = result.params ?
+                    `\n\n参数设置:\n- Temperature: ${result.params.temperature}\n- Top-P: ${result.params.top_p}` : '';
+                this.showTestResult(resultEl, `✓ ${result.message}\n回复: ${result.reply}${paramsInfo}`, 'success');
                 toast.success('模型测试成功');
             } else {
                 this.showTestResult(resultEl, `✗ ${result.error}`, 'error');
@@ -236,7 +240,7 @@ class APITester {
             toast.error('模型测试失败');
         } finally {
             btn.disabled = false;
-            btn.textContent = '测试主模型';
+            btn.textContent = '测试模型';
         }
     }
 

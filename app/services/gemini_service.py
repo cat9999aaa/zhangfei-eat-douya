@@ -6,8 +6,23 @@ from app.utils.validators import normalize_field
 from app.config import VISUAL_TEMPLATE_PRESETS
 
 
-def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_prompt=''):
+def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_prompt='', temperature=1.0, top_p=0.95):
     """使用 Gemini API 生成文章"""
+    # 打印参数信息以便验证
+    print(f"\n{'='*60}")
+    print(f"🔧 Gemini API 调用参数:")
+    print(f"   模型: {model_name}")
+    print(f"   Temperature: {temperature}")
+    print(f"   Top-P: {top_p}")
+    print(f"   提示词长度: {len(custom_prompt if custom_prompt else prompt)} 字符")
+    print(f"{'='*60}\n")
+
+    # 打印提示词前500字符，方便验证
+    actual_prompt = custom_prompt if custom_prompt else prompt
+    print(f"📝 使用的提示词（前500字符）:")
+    print(actual_prompt[:500] + "..." if len(actual_prompt) > 500 else actual_prompt)
+    print(f"{'='*60}\n")
+
     if custom_prompt:
         prompt = custom_prompt.replace('{topic}', topic)
     else:
@@ -31,15 +46,48 @@ def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_pr
     data = {
         'contents': [{
             'parts': [{'text': prompt}]
-        }]
+        }],
+        'generationConfig': {
+            'temperature': temperature,
+            'topP': top_p
+        }
     }
 
-    response = requests.post(url, headers=headers, json=data)
-    response.raise_for_status()
+    # 🔍 打印实际发送给 API 的请求体（验证参数是否真的发送了）
+    print(f"📤 实际发送给 Gemini API 的请求体:")
+    print(f"   URL: {url.split('?key=')[0]}?key=***")
+    print(f"   请求体 generationConfig 部分:")
+    import json
+    print(json.dumps(data['generationConfig'], indent=6, ensure_ascii=False))
+    print(f"{'='*60}\n")
+
+    try:
+        response = requests.post(url, headers=headers, json=data)
+
+        # 如果响应不是 2xx，打印详细错误信息
+        if response.status_code != 200:
+            print(f"\n❌ Gemini API 返回错误:")
+            print(f"   状态码: {response.status_code}")
+            print(f"   错误响应:")
+            try:
+                error_detail = response.json()
+                print(json.dumps(error_detail, indent=6, ensure_ascii=False))
+            except:
+                print(f"   {response.text}")
+            print(f"{'='*60}\n")
+
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        print(f"\n❌ HTTP 错误详情:")
+        print(f"   请求的 temperature: {temperature} (类型: {type(temperature).__name__})")
+        print(f"   请求的 top_p: {top_p} (类型: {type(top_p).__name__})")
+        raise Exception(f"Gemini API 请求失败: {e}")
 
     result = response.json()
     if 'candidates' in result and len(result['candidates']) > 0:
-        return result['candidates'][0]['content']['parts'][0]['text']
+        article = result['candidates'][0]['content']['parts'][0]['text']
+        print(f"✓ 文章生成完成（使用 Temperature={temperature}, Top-P={top_p}）")
+        return article
     else:
         raise Exception('无法从 API 响应中提取文章内容')
 
@@ -233,7 +281,7 @@ def summarize_paragraph_for_image(paragraph_text, topic, config):
         return f"visual representation of {topic}，纯视觉场景，无任何文字或符号"
 
 
-def test_gemini_model(model_name, api_key, base_url):
+def test_gemini_model(model_name, api_key, base_url, temperature=1.0, top_p=0.95):
     """测试 Gemini 模型连接"""
     test_prompt = "请用一句话介绍你自己。"
 
@@ -242,17 +290,27 @@ def test_gemini_model(model_name, api_key, base_url):
     payload = {
         'contents': [{
             'parts': [{'text': test_prompt}]
-        }]
+        }],
+        'generationConfig': {
+            'temperature': temperature,
+            'topP': top_p
+        }
     }
+
+    # 🔍 打印测试请求的配置参数
+    print(f"\n📤 测试模型时发送的 generationConfig:")
+    import json
+    print(json.dumps(payload['generationConfig'], indent=4, ensure_ascii=False))
+    print()
 
     response = requests.post(url, headers=headers, json=payload, timeout=30)
 
     if response.status_code == 401:
-        return False, 'API Key 无效或已过期'
+        return False, 'API Key 无效或已过期', {}
     elif response.status_code == 403:
-        return False, '权限不足或配额已用完'
+        return False, '权限不足或配额已用完', {}
     elif response.status_code == 404:
-        return False, f'模型 {model_name} 不存在'
+        return False, f'模型 {model_name} 不存在', {}
 
     response.raise_for_status()
 
@@ -260,9 +318,14 @@ def test_gemini_model(model_name, api_key, base_url):
 
     if 'candidates' in result and len(result['candidates']) > 0:
         reply = result['candidates'][0]['content']['parts'][0]['text']
-        return True, reply[:100] + ('...' if len(reply) > 100 else '')
+        # 返回参数信息
+        params_info = {
+            'temperature': temperature,
+            'top_p': top_p
+        }
+        return True, reply[:100] + ('...' if len(reply) > 100 else ''), params_info
     else:
-        return False, '模型返回了空响应'
+        return False, '模型返回了空响应', {}
 
 
 def get_available_models(api_key, base_url):
