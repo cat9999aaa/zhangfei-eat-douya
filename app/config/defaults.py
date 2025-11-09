@@ -87,6 +87,8 @@ DEFAULT_GEMINI_IMAGE_CONFIG = {
     'style': 'realistic',  # 默认风格
     'custom_prefix': '',  # 自定义提示词前缀
     'custom_suffix': '',  # 自定义提示词后缀
+    'ethnicity': 'auto',  # 人物种族偏好（auto, asian, chinese, japanese, korean, caucasian, african, latino, diverse）
+    'auto_detect_topic': True,  # 智能主题检测（自动分析文章内容推荐人物种族和风格）
     'max_retries': 3,  # 默认重试 3 次
     'timeout': 30,  # 超时时间（秒）
     'aspect_ratio': '16:9'  # 默认宽高比

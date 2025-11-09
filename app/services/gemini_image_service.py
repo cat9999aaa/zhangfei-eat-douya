@@ -4,6 +4,7 @@ import os
 import base64
 import requests
 import uuid
+import json
 from datetime import datetime
 from app.config.loader import load_config
 
@@ -57,62 +58,372 @@ GEMINI_IMAGE_ASPECT_RATIOS = {
     }
 }
 
-# Gemini 图像生成预设风格
+# Gemini 图像生成预设风格（优化版 - 提升图片质量）
 GEMINI_IMAGE_STYLE_PRESETS = {
     'realistic': {
         'name': '写实摄影',
-        'prompt_prefix': 'Highly detailed realistic photography, natural lighting, sharp focus, professional camera, ',
-        'prompt_suffix': ', photorealistic, 8k resolution, high quality, no text or words'
+        'prompt_prefix': 'Award-winning professional photography, ultra detailed realistic, cinematic lighting, perfect composition, shallow depth of field, ',
+        'prompt_suffix': ', photorealistic masterpiece, 8k uhd, dslr quality, bokeh effect, magazine cover worthy, high dynamic range, sharp focus, professional color grading, no text or words'
     },
     'illustration': {
         'name': '插画风格',
-        'prompt_prefix': 'Beautiful illustration art, detailed artwork, artistic style, ',
-        'prompt_suffix': ', digital painting, vibrant colors, high quality, no text or letters'
+        'prompt_prefix': 'Stunning digital illustration, masterful artwork, trending on artstation, highly detailed, ',
+        'prompt_suffix': ', vibrant colors, professional digital painting, award-winning illustration, cinematic composition, high quality, no text or letters'
     },
     'anime': {
         'name': '动漫风格',
-        'prompt_prefix': 'Anime style artwork, detailed anime art, Japanese animation style, ',
-        'prompt_suffix': ', vibrant colors, clean lines, high quality anime, no text or words'
+        'prompt_prefix': 'High quality anime style artwork, detailed character design, professional anime art, beautiful shading, ',
+        'prompt_suffix': ', vibrant colors, clean lines, studio quality anime, trending on pixiv, ultra detailed, no text or words'
     },
     'cyberpunk': {
         'name': '赛博朋克',
-        'prompt_prefix': 'Cyberpunk style, neon lights, futuristic cityscape, high-tech atmosphere, ',
-        'prompt_suffix': ', dramatic lighting, neon colors, dystopian future, 8k, no text or signs'
+        'prompt_prefix': 'Stunning cyberpunk scene, neon-lit cityscape, high-tech atmosphere, cinematic composition, blade runner style, ',
+        'prompt_suffix': ', dramatic volumetric lighting, vibrant neon colors, ultra detailed, 8k uhd, dystopian future aesthetic, professional photography, no text or signs'
     },
     'business': {
         'name': '商业配图',
-        'prompt_prefix': 'Professional business illustration, clean design, corporate style, ',
-        'prompt_suffix': ', modern aesthetic, professional quality, suitable for presentations, no text or words'
+        'prompt_prefix': 'Professional business photography, clean modern design, corporate aesthetic, editorial quality, ',
+        'prompt_suffix': ', magazine quality, professional lighting, contemporary style, high-end business visual, no text or words'
     },
     'watercolor': {
         'name': '水彩画',
-        'prompt_prefix': 'Watercolor painting style, soft colors, artistic brushstrokes, ',
-        'prompt_suffix': ', delicate details, flowing colors, artistic quality, no text or letters'
+        'prompt_prefix': 'Beautiful watercolor painting, professional artist quality, soft dreamy colors, delicate brushwork, ',
+        'prompt_suffix': ', artistic masterpiece, flowing watercolor effects, gallery worthy, fine art quality, no text or letters'
     },
     'minimalist': {
         'name': '极简主义',
-        'prompt_prefix': 'Minimalist design, clean composition, simple shapes, ',
-        'prompt_suffix': ', modern aesthetics, negative space, elegant simplicity, no text or words'
+        'prompt_prefix': 'Elegant minimalist design, clean sophisticated composition, perfect balance, modern luxury aesthetic, ',
+        'prompt_suffix': ', premium quality, professional design, negative space mastery, high-end minimalism, no text or words'
     },
     'fantasy': {
         'name': '奇幻风格',
-        'prompt_prefix': 'Fantasy art, magical atmosphere, imaginative scene, ',
-        'prompt_suffix': ', epic scale, mystical lighting, highly detailed, cinematic, no text or words'
+        'prompt_prefix': 'Epic fantasy artwork, magical atmosphere, breathtaking scene, cinematic fantasy art, ',
+        'prompt_suffix': ', dramatic lighting, mystical ambience, ultra detailed, award-winning fantasy art, trending on artstation, no text or words'
     }
 }
 
+# 人物种族/地域偏好设置
+GEMINI_IMAGE_ETHNICITY_PRESETS = {
+    'auto': {
+        'name': '自动（模型默认）',
+        'prompt_modifier': '',
+        'safety_suffix': ''
+    },
+    'asian': {
+        'name': '亚洲人',
+        'prompt_modifier': 'Asian civilians in casual clothes, everyday people, East Asian features, ',
+        'safety_suffix': 'casual clothing, civilian attire, everyday fashion, '
+    },
+    'chinese': {
+        'name': '中国人',
+        'prompt_modifier': 'Chinese civilians in casual modern clothes, everyday people, East Asian features, ',
+        'safety_suffix': 'modern casual clothing, civilian attire, street fashion, '
+    },
+    'japanese': {
+        'name': '日本人',
+        'prompt_modifier': 'Japanese civilians in casual clothes, everyday people, East Asian features, ',
+        'safety_suffix': 'casual clothing, civilian attire, contemporary fashion, '
+    },
+    'korean': {
+        'name': '韩国人',
+        'prompt_modifier': 'Korean civilians in casual clothes, everyday people, East Asian features, ',
+        'safety_suffix': 'casual clothing, civilian attire, modern fashion, '
+    },
+    'caucasian': {
+        'name': '白种人',
+        'prompt_modifier': 'Caucasian civilians in casual clothes, everyday people, European features, ',
+        'safety_suffix': 'casual clothing, civilian attire, '
+    },
+    'african': {
+        'name': '非洲人',
+        'prompt_modifier': 'African civilians in casual clothes, everyday people, African features, ',
+        'safety_suffix': 'casual clothing, civilian attire, '
+    },
+    'latino': {
+        'name': '拉丁裔',
+        'prompt_modifier': 'Latino civilians in casual clothes, everyday people, Latin American features, ',
+        'safety_suffix': 'casual clothing, civilian attire, '
+    },
+    'diverse': {
+        'name': '多元化',
+        'prompt_modifier': 'diverse civilians in casual clothes, multicultural everyday people, various ethnicities, ',
+        'safety_suffix': 'casual clothing, civilian attire, '
+    }
+}
 
-def apply_style_to_prompt(base_prompt, style='realistic', aspect_ratio='16:9', custom_prefix='', custom_suffix='', use_api_aspect_ratio=True):
+# 智能安全负面提示词 - 根据主题动态调整
+def get_smart_safety_prompt(topic_analysis=None):
     """
-    将风格和比例应用到提示词上
+    根据主题分析结果生成智能安全负面提示词
+
+    Args:
+        topic_analysis: 主题分析结果字典，包含 sensitivity_level 等信息
+
+    Returns:
+        str: 负面提示词
+    """
+    # 基础安全提示（总是包含）- 加强文字约束
+    base_safety = (
+        'IMPORTANT: NO text, NO words, NO letters, NO numbers, NO symbols, NO typography, NO watermarks, NO captions, NO signs, '
+        'NO violence, NO weapons, NO blood, NO gore, '
+        'pure visual content only, image without any text elements'
+    )
+
+    # 如果没有主题分析，使用强力过滤（保持向后兼容）
+    if not topic_analysis:
+        return (
+            f'{base_safety}, '
+            'NO uniforms, NO police, NO military, NO soldiers, NO flags, '
+            'NO national flags, NO political symbols, NO government buildings, '
+            'only civilians, only casual clothes, peaceful scenes only'
+        )
+
+    sensitivity = topic_analysis.get('sensitivity_level', 'medium')
+
+    # 高敏感度（政治、军事等）
+    if sensitivity == 'high':
+        return (
+            f'{base_safety}, '
+            'NO Chinese flags, NO police uniforms, NO military uniforms, '
+            'NO government buildings, NO political symbols, '
+            'NO badges, NO emblems, civilian clothes only'
+        )
+
+    # 中等敏感度（新闻、社会话题）
+    elif sensitivity == 'medium':
+        return (
+            f'{base_safety}, '
+            'NO Chinese flags, NO police uniforms, NO official uniforms, '
+            'casual clothes preferred'
+        )
+
+    # 低敏感度（娱乐、科技、艺术等）
+    else:
+        return f'{base_safety}, high quality, professional'
+
+
+# 默认强力安全负面提示词（向后兼容）
+SAFETY_NEGATIVE_PROMPT = get_smart_safety_prompt()
+
+
+def analyze_topic_for_image_generation(topic, article_content, api_key, base_url='https://generativelanguage.googleapis.com', model='gemini-pro'):
+    """
+    智能分析文章主题，自动推荐图片生成参数
+
+    Args:
+        topic: 文章主题
+        article_content: 文章内容（可选，用于更精确的分析）
+        api_key: Gemini API Key
+        base_url: API 基础 URL
+        model: 使用的分析模型
+
+    Returns:
+        dict: 包含推荐参数的字典
+        {
+            'ethnicity': 'chinese|caucasian|japanese|korean|diverse|auto',
+            'style': 'realistic|anime|illustration|...',
+            'sensitivity_level': 'high|medium|low',
+            'reasoning': '分析理由',
+            'detected_topics': ['主题标签列表']
+        }
+    """
+    try:
+        print("\n🔍 智能分析主题，推荐图片生成参数...")
+
+        # 构建分析提示词
+        analysis_prompt = f"""请分析以下文章主题和内容，为AI图片生成推荐最佳参数。
+
+文章主题：{topic}
+
+文章内容摘要：{article_content[:500] if article_content else '无'}
+
+请以JSON格式返回分析结果（只返回JSON，不要其他文字）：
+
+{{
+    "ethnicity": "推荐的人物种族（chinese/japanese/korean/caucasian/african/latino/diverse/auto）",
+    "style": "推荐的图片风格（realistic/anime/illustration/cyberpunk/business/watercolor/minimalist/fantasy）",
+    "sensitivity_level": "敏感度等级（high/medium/low）",
+    "reasoning": "推荐理由（简短说明）",
+    "detected_topics": ["检测到的主题标签"]
+}}
+
+分析规则：
+
+**核心原则：默认中国人，除非明确是外国人物或动漫主题**
+
+1. **人物种族选择（按优先级判断）**：
+
+   **优先级1 - 明确外国人物（选择对应种族）**：
+   - 主题明确讨论**具体外国人物**（如特朗普、马斯克、拜登、普京等）→ 选择对应种族
+   - 主题是**外国国家内政且涉及该国人物**（如美国大选、日本首相、韩国总统）→ 选择对应种族
+
+   **优先级2 - 动漫/游戏主题（选择auto）**：
+   - 讨论动漫、游戏、二次元角色 → ethnicity选auto, style选anime
+   - 注意：如果是**国产动漫/游戏**，ethnicity选chinese, style选anime
+
+   **优先级3 - 默认中国人（其他所有情况）**：
+   - 中国话题 → chinese
+   - 科技、商业、社会话题（即使涉及外国企业，但不是讨论具体人物）→ chinese
+   - 国际话题但无具体外国人物 → chinese
+   - 不确定的话题 → chinese
+
+   **判断流程**：
+   1. 是否明确提到外国人物姓名？→ 是 → 对应种族（caucasian/japanese/korean/african/latino）
+   2. 是否是动漫/游戏主题？→ 是 → auto（如果是国产则chinese）
+   3. 是否是外国内政且涉及该国人物？→ 是 → 对应种族
+   4. **以上都不是 → 默认 chinese**
+
+   可选值：chinese, caucasian, japanese, korean, african, latino, diverse, auto
+
+2. **图片风格选择**：
+   - 新闻、政治、商业、科技 → realistic
+   - 动漫、游戏、二次元 → anime
+   - 艺术、创意、设计 → illustration
+   - 科幻、未来科技 → cyberpunk
+   - 商务报告、企业内容 → business
+   - 艺术创作、文艺 → watercolor
+   - 简约设计、现代风格 → minimalist
+   - 奇幻、魔法、神话 → fantasy
+
+3. **敏感度等级**：
+   - high: 政治、军事、宗教、社会敏感话题
+   - medium: 一般新闻、社会话题、商业
+   - low: 娱乐、科技、艺术、生活方式
+
+示例：
+- "特朗普最新演讲" → {{"ethnicity": "caucasian", "style": "realistic", "sensitivity_level": "high"}}
+- "马斯克收购推特" → {{"ethnicity": "caucasian", "style": "realistic", "sensitivity_level": "medium"}}
+- "《原神》新角色介绍" → {{"ethnicity": "auto", "style": "anime", "sensitivity_level": "low"}}
+- "国产动漫崛起" → {{"ethnicity": "chinese", "style": "anime", "sensitivity_level": "low"}}
+- "人工智能发展趋势" → {{"ethnicity": "chinese", "style": "realistic", "sensitivity_level": "medium"}}（科技话题，默认中国人）
+- "美国科技公司裁员潮" → {{"ethnicity": "chinese", "style": "realistic", "sensitivity_level": "medium"}}（虽然是美国企业，但无具体人物，默认中国人）
+- "职场内卷现象" → {{"ethnicity": "chinese", "style": "realistic", "sensitivity_level": "medium"}}（社会话题，默认中国人）
+- "中国科技创新突破" → {{"ethnicity": "chinese", "style": "realistic", "sensitivity_level": "medium"}}
+"""
+
+        # 构建请求 URL
+        if base_url.endswith('/'):
+            base_url = base_url[:-1]
+
+        url = f"{base_url}/v1beta/models/{model}:generateContent?key={api_key}"
+
+        headers = {'Content-Type': 'application/json'}
+
+        payload = {
+            'contents': [{
+                'parts': [{
+                    'text': analysis_prompt
+                }]
+            }],
+            'generationConfig': {
+                'temperature': 0.2,  # 使用较低温度保证稳定输出
+                'topK': 40,
+                'topP': 0.95,
+                'maxOutputTokens': 1024,
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+
+        print(f"   API响应状态: {response.status_code}")
+
+        if response.status_code == 200:
+            result = response.json()
+
+            # 提取文本内容 - 按照官方文档的响应格式
+            if 'candidates' in result and len(result['candidates']) > 0:
+                candidate = result['candidates'][0]
+
+                # 检查是否有finishReason（可能被安全过滤拦截）
+                finish_reason = candidate.get('finishReason', '')
+                if finish_reason and finish_reason != 'STOP':
+                    print(f"   ⚠️  生成被终止，原因: {finish_reason}")
+                    if 'safetyRatings' in candidate:
+                        print(f"   安全评级: {candidate['safetyRatings']}")
+
+                # 按照官方文档格式: candidates[0].content.parts[0].text
+                if 'content' in candidate:
+                    content = candidate['content']
+                    if 'parts' in content and len(content['parts']) > 0:
+                        text = content['parts'][0].get('text', '')
+                        if text:
+                            print(f"   AI返回文本: {text[:200]}...")
+
+                            # 尝试解析JSON
+                            import re
+                            # 先去除markdown代码块标记（```json 和 ```）
+                            text = re.sub(r'```json\s*', '', text)
+                            text = re.sub(r'```\s*$', '', text)
+                            text = text.strip()
+
+                            # 提取JSON部分
+                            json_match = re.search(r'\{[\s\S]*\}', text)
+                            if json_match:
+                                json_str = json_match.group(0)
+                                try:
+                                    analysis_result = json.loads(json_str)
+
+                                    print(f"✓ 主题分析完成")
+                                    print(f"  推荐人物种族: {analysis_result.get('ethnicity', 'auto')}")
+                                    print(f"  推荐图片风格: {analysis_result.get('style', 'realistic')}")
+                                    print(f"  敏感度等级: {analysis_result.get('sensitivity_level', 'medium')}")
+                                    print(f"  分析理由: {analysis_result.get('reasoning', '无')}")
+
+                                    return analysis_result
+                                except json.JSONDecodeError as e:
+                                    print(f"   ❌ JSON解析失败: {e}")
+                                    print(f"   尝试解析的JSON: {json_str[:200]}")
+                            else:
+                                print(f"   ❌ 未找到JSON格式数据")
+                                print(f"   文本内容: {text[:300]}")
+                        else:
+                            print(f"   ❌ parts[0].text为空")
+                    else:
+                        print(f"   ❌ content中没有parts或parts为空")
+                        print(f"   content内容: {content}")
+                else:
+                    print(f"   ❌ candidate中没有content字段")
+                    print(f"   candidate keys: {list(candidate.keys())}")
+                    print(f"   candidate内容: {candidate}")
+            else:
+                print(f"   ❌ 响应中没有candidates或candidates为空")
+                print(f"   响应keys: {list(result.keys())}")
+                print(f"   完整响应: {result}")
+        else:
+            print(f"   API请求失败: {response.status_code}")
+            print(f"   错误信息: {response.text[:200]}")
+
+        # 如果分析失败，返回默认值
+        print(f"⚠️  主题分析失败，使用默认参数")
+
+    except Exception as e:
+        print(f"⚠️  主题分析出错: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # 返回默认值（保守策略：默认中国人）
+    print(f"   返回默认配置: ethnicity=chinese, style=realistic")
+    return {
+        'ethnicity': 'chinese',  # 默认中国人
+        'style': 'realistic',
+        'sensitivity_level': 'medium',
+        'reasoning': '分析失败，使用默认参数（默认中国人物）',
+        'detected_topics': []
+    }
+
+
+def apply_style_to_prompt(base_prompt, style='realistic', aspect_ratio='16:9', custom_prefix='', custom_suffix='', ethnicity='auto', use_api_aspect_ratio=True, topic_analysis=None):
+    """
+    将风格、人物种族和比例应用到提示词上
 
     组合顺序（风格提示词在摘要内容之前）：
-    用户自定义前缀 → 预设风格前缀 → 预设风格后缀 → [比例提示*] → 摘要内容 → 用户自定义后缀
+    用户自定义前缀 → 人物种族 → 预设风格前缀 → 预设风格后缀 → [比例提示*] → 摘要内容 → 安全后缀 → 用户自定义后缀 → 智能安全负面提示
 
     * 只有当 use_api_aspect_ratio=False 时才在提示词中添加比例描述
       如果通过 API 参数控制比例，则不在提示词中重复
 
-    这样所有预设风格提示词都在摘要之前，用户自定义的前缀优先级最高
+    Args:
+        topic_analysis: 主题分析结果，用于智能调整安全过滤级别
     """
     parts = []
 
@@ -120,31 +431,47 @@ def apply_style_to_prompt(base_prompt, style='realistic', aspect_ratio='16:9', c
     if custom_prefix:
         parts.append(custom_prefix.strip())
 
-    # 2. 预设风格前缀
+    # 2. 人物种族偏好（如果设置）
+    if ethnicity and ethnicity != 'auto' and ethnicity in GEMINI_IMAGE_ETHNICITY_PRESETS:
+        ethnicity_modifier = GEMINI_IMAGE_ETHNICITY_PRESETS[ethnicity]['prompt_modifier'].strip()
+        if ethnicity_modifier:
+            parts.append(ethnicity_modifier)
+
+    # 3. 预设风格前缀
     if style in GEMINI_IMAGE_STYLE_PRESETS:
         preset_prefix = GEMINI_IMAGE_STYLE_PRESETS[style]['prompt_prefix'].strip()
         if preset_prefix:
             parts.append(preset_prefix)
 
-    # 3. 预设风格后缀（放在摘要之前）
+    # 4. 预设风格后缀（放在摘要之前）
     if style in GEMINI_IMAGE_STYLE_PRESETS:
         preset_suffix = GEMINI_IMAGE_STYLE_PRESETS[style]['prompt_suffix'].strip()
         if preset_suffix:
             parts.append(preset_suffix)
 
-    # 4. 比例提示（只有当不使用API参数时才添加到提示词）
+    # 5. 比例提示（只有当不使用API参数时才添加到提示词）
     if not use_api_aspect_ratio and aspect_ratio in GEMINI_IMAGE_ASPECT_RATIOS:
         ratio_hint = GEMINI_IMAGE_ASPECT_RATIOS[aspect_ratio]['prompt_hint'].strip()
         if ratio_hint:
             parts.append(ratio_hint)
 
-    # 5. 摘要内容（核心内容，在所有风格之后）
+    # 6. 摘要内容（核心内容，在所有风格之后）
     if base_prompt:
         parts.append(base_prompt.strip())
 
-    # 6. 用户自定义后缀（最后）
+    # 7. 种族安全后缀（强调平民服装）
+    if ethnicity and ethnicity != 'auto' and ethnicity in GEMINI_IMAGE_ETHNICITY_PRESETS:
+        safety_suffix = GEMINI_IMAGE_ETHNICITY_PRESETS[ethnicity].get('safety_suffix', '').strip()
+        if safety_suffix:
+            parts.append(safety_suffix)
+
+    # 8. 用户自定义后缀
     if custom_suffix:
         parts.append(custom_suffix.strip())
+
+    # 9. 智能安全负面提示（根据主题分析动态调整）
+    smart_safety = get_smart_safety_prompt(topic_analysis)
+    parts.append(smart_safety)
 
     # 使用逗号+空格连接所有部分
     return ', '.join(filter(None, parts)) if parts else base_prompt
@@ -159,8 +486,10 @@ def generate_image_with_gemini(
     aspect_ratio='16:9',
     custom_style_prefix='',
     custom_style_suffix='',
+    ethnicity='auto',
     max_retries=3,
-    timeout=30
+    timeout=30,
+    topic_analysis=None
 ):
     """
     使用 Gemini API 生成图像
@@ -177,8 +506,10 @@ def generate_image_with_gemini(
         aspect_ratio: 图片比例（1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3）
         custom_style_prefix: 自定义风格前缀
         custom_style_suffix: 自定义风格后缀
+        ethnicity: 人物种族偏好（auto, asian, chinese, japanese, korean, caucasian, african, latino, diverse）
         max_retries: 最大重试次数
         timeout: 请求超时时间（秒）
+        topic_analysis: 主题分析结果，用于智能调整安全过滤
 
     Returns:
         tuple: (image_path, metadata) 成功时返回图片路径和元数据，失败返回 (None, None)
@@ -195,7 +526,9 @@ def generate_image_with_gemini(
         aspect_ratio,
         custom_style_prefix,
         custom_style_suffix,
-        use_api_aspect_ratio=use_api_aspect_ratio
+        ethnicity,
+        use_api_aspect_ratio=use_api_aspect_ratio,
+        topic_analysis=topic_analysis
     )
 
     # 构建请求 URL
@@ -242,7 +575,7 @@ def generate_image_with_gemini(
     payload = {
         'contents': [{
             'parts': [{
-                'text': f'Generate an image: {styled_prompt}'
+                'text': f'Generate a photorealistic image with NO TEXT, NO WORDS, NO LETTERS whatsoever. Image description: {styled_prompt}'
             }]
         }],
         'generationConfig': generation_config

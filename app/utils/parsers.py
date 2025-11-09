@@ -43,6 +43,9 @@ def extract_article_title(article):
     return "未命名文章"
 
 
+
+
+
 def derive_keyword_from_blueprint(blueprint):
     """从视觉蓝图中提取英文关键词，用于备用图片源"""
     if not blueprint:

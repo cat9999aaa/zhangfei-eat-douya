@@ -2,27 +2,21 @@
 
 import requests
 from app.utils.parsers import parse_json_response
+from app.utils.filters import (
+    is_domain_blacklisted, is_tld_whitelisted, is_static_url,
+    contains_blacklisted_keyword, contains_chinese, contains_traditional_chinese,
+    log_filtered_event
+)
 from app.utils.validators import normalize_field
 from app.config import VISUAL_TEMPLATE_PRESETS
+from app.utils.network import fetch_real_url_and_title
 
 
-def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_prompt='', temperature=1.0, top_p=0.95):
-    """使用 Gemini API 生成文章"""
-    # 打印参数信息以便验证
-    print(f"\n{'='*60}")
-    print(f"🔧 Gemini API 调用参数:")
-    print(f"   模型: {model_name}")
-    print(f"   Temperature: {temperature}")
-    print(f"   Top-P: {top_p}")
-    print(f"   提示词长度: {len(custom_prompt if custom_prompt else prompt)} 字符")
-    print(f"{'='*60}\n")
+def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_prompt='', temperature=1.0, top_p=0.95, enable_search=True):
+    """使用 Gemini API 生成文章，支持 Google 搜索和思考过程展示"""
+    import json
 
-    # 打印提示词前500字符，方便验证
-    actual_prompt = custom_prompt if custom_prompt else prompt
-    print(f"📝 使用的提示词（前500字符）:")
-    print(actual_prompt[:500] + "..." if len(actual_prompt) > 500 else actual_prompt)
-    print(f"{'='*60}\n")
-
+    # 构建提示词
     if custom_prompt:
         prompt = custom_prompt.replace('{topic}', topic)
     else:
@@ -41,8 +35,25 @@ def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_pr
 
 请直接开始写文章，不需要额外的说明。"""
 
+    # 打印参数信息
+    print(f"\n{'='*60}")
+    print(f"🔧 Gemini API 调用参数:")
+    print(f"   模型: {model_name}")
+    print(f"   Temperature: {temperature}")
+    print(f"   Top-P: {top_p}")
+    print(f"   启用搜索: {enable_search}")
+    print(f"   提示词长度: {len(prompt)} 字符")
+    print(f"{'='*60}\n")
+
+    # 打印提示词前500字符
+    print(f"📝 使用的提示词（前500字符）:")
+    print(prompt[:500] + "..." if len(prompt) > 500 else prompt)
+    print(f"{'='*60}\n")
+
+    # 构建请求数据（使用非流式 API）
     url = f'{base_url}/v1beta/models/{model_name}:generateContent?key={api_key}'
     headers = {'Content-Type': 'application/json'}
+
     data = {
         'contents': [{
             'parts': [{'text': prompt}]
@@ -53,18 +64,26 @@ def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_pr
         }
     }
 
-    # 🔍 打印实际发送给 API 的请求体（验证参数是否真的发送了）
-    print(f"📤 实际发送给 Gemini API 的请求体:")
+    # 添加 Google 搜索工具（如果启用）
+    if enable_search:
+        data['tools'] = [{
+            'googleSearch': {}
+        }]
+        print(f"🔍 已启用 Google 搜索功能\n")
+
+    # 打印请求配置
+    print(f"📤 实际发送给 Gemini API 的配置:")
     print(f"   URL: {url.split('?key=')[0]}?key=***")
-    print(f"   请求体 generationConfig 部分:")
-    import json
-    print(json.dumps(data['generationConfig'], indent=6, ensure_ascii=False))
+    print(f"   请求体配置:")
+    safe_data = data.copy()
+    print(json.dumps(safe_data, indent=4, ensure_ascii=False))
     print(f"{'='*60}\n")
 
     try:
-        response = requests.post(url, headers=headers, json=data)
+        # 发送请求
+        print(f"⏳ 正在生成文章...\n")
+        response = requests.post(url, headers=headers, json=data, timeout=120)
 
-        # 如果响应不是 2xx，打印详细错误信息
         if response.status_code != 200:
             print(f"\n❌ Gemini API 返回错误:")
             print(f"   状态码: {response.status_code}")
@@ -77,19 +96,221 @@ def generate_article_with_gemini(topic, api_key, base_url, model_name, custom_pr
             print(f"{'='*60}\n")
 
         response.raise_for_status()
+
+        # 解析响应
+        result = response.json()
+
+        # 提取文章内容
+        article_text = ""
+        search_queries = []
+        grounding_sources = []
+        thinking_text = ""
+
+        if 'candidates' in result and len(result['candidates']) > 0:
+            candidate = result['candidates'][0]
+
+            # 提取文本内容
+            if 'content' in candidate and 'parts' in candidate['content']:
+                for part in candidate['content']['parts']:
+                    if 'text' in part:
+                        article_text += part['text']
+
+                    # 检查是否有思考过程
+                    if 'thought' in part and part['thought']:
+                        thinking_text += part['thought'] + "\n"
+
+            # 提取搜索元数据
+            if 'groundingMetadata' in candidate:
+                metadata = candidate['groundingMetadata']
+
+                # 提取搜索查询
+                if 'webSearchQueries' in metadata:
+                    search_queries = metadata['webSearchQueries']
+
+                # 提取引用来源
+                if 'groundingChunks' in metadata:
+                    for chunk_item in metadata['groundingChunks']:
+                        if 'web' in chunk_item:
+                            source = {
+                                'uri': chunk_item['web'].get('uri', ''),
+                                'title': chunk_item['web'].get('title', '')
+                            }
+                            grounding_sources.append(source)
+
+        # 显示思考过程
+        if thinking_text:
+            print(f"💭 模型思考过程:")
+            print(thinking_text)
+            print(f"{'='*60}\n")
+
+        # 显示搜索信息
+        if search_queries:
+            print(f"🔍 模型执行的搜索查询:")
+            for i, query in enumerate(search_queries, 1):
+                print(f"   {i}. {query}")
+            print()
+
+        if grounding_sources:
+            print(f"📚 引用来源 ({len(grounding_sources)} 个):")
+            for i, source in enumerate(grounding_sources[:5], 1):  # 只显示前5个
+                print(f"   {i}. {source['title']}")
+                print(f"      {source['uri']}")
+            if len(grounding_sources) > 5:
+                print(f"   ... 还有 {len(grounding_sources) - 5} 个来源")
+            print()
+
+        print(f"✓ 文章生成完成")
+        print(f"  - Temperature: {temperature}")
+        print(f"  - Top-P: {top_p}")
+        print(f"  - 文章长度: {len(article_text)} 字符")
+        if search_queries:
+            print(f"  - 搜索次数: {len(search_queries)}")
+        if grounding_sources:
+            print(f"  - 引用来源: {len(grounding_sources)} 个")
+        print(f"{'='*60}\n")
+
+        if not article_text:
+            raise Exception('无法从 API 响应中提取文章内容')
+
+        # 返回文章内容和引用来源（元组形式）
+        return article_text, grounding_sources
+
     except requests.exceptions.HTTPError as e:
         print(f"\n❌ HTTP 错误详情:")
         print(f"   请求的 temperature: {temperature} (类型: {type(temperature).__name__})")
         print(f"   请求的 top_p: {top_p} (类型: {type(top_p).__name__})")
         raise Exception(f"Gemini API 请求失败: {e}")
+    except Exception as e:
+        print(f"\n❌ 处理响应时出错: {e}")
+        raise
 
-    result = response.json()
-    if 'candidates' in result and len(result['candidates']) > 0:
-        article = result['candidates'][0]['content']['parts'][0]['text']
-        print(f"✓ 文章生成完成（使用 Temperature={temperature}, Top-P={top_p}）")
-        return article
-    else:
-        raise Exception('无法从 API 响应中提取文章内容')
+
+def format_article_with_citations(article_text, grounding_sources):
+    """
+    在文章末尾添加参考资料引用链接，并进行智能排序和筛选
+    """
+    if not grounding_sources:
+        return article_text
+
+    print(f"\n🔍 开始处理 {len(grounding_sources)} 个原始引用来源...")
+    processed_sources = []
+    seen_urls = set()
+
+    # 定义无效页面标题的关键词黑名单
+    INVALID_TITLE_KEYWORDS = [
+        '404', 'not found', '页面不存在', '找不到', 'page verification',
+        'are you a robot', 'just a moment', 'checking your browser',
+        '安全验证', '人机验证', '访问验证', 'login', '登录', 'error', '错误'
+    ]
+    for source in grounding_sources:
+        original_uri = source.get('uri', '')
+        if not original_uri:
+            continue
+
+        print(f"  → 正在解析: {original_uri[:70]}...")
+        real_url, title, site_name, lang = fetch_real_url_and_title(original_uri)
+
+        # --- 终极版八层过滤系统 ---
+        # 1. GFWList 黑名单检查
+        matched_rule = is_domain_blacklisted(real_url)
+        if matched_rule:
+            print(f"  ✗ [1/8] 域名在 GFWList 黑名单中，已过滤")
+            log_filtered_event(real_url, "1. GFWList Blacklist", f"Matched: {matched_rule}")
+            continue
+
+        # 2. TLD 白名单检查
+        if not is_tld_whitelisted(real_url):
+            print(f"  ✗ [2/8] 域名后缀不在白名单内，已过滤")
+            log_filtered_event(real_url, "2. TLD Whitelist", f"URL: {real_url}")
+            continue
+
+        # 3. 静态链接格式检查
+        if not is_static_url(real_url):
+            print(f"  ✗ [3/8] URL 非静态链接 (非 .html/.htm)，已过滤")
+            log_filtered_event(real_url, "3. Non-Static URL", f"URL: {real_url}")
+            continue
+
+        # 4. 标题关键词黑名单检查
+        if contains_blacklisted_keyword(title):
+            print(f"  ✗ [4/8] 标题包含黑名单关键词，已过滤")
+            log_filtered_event(real_url, "4. Title Keyword Blacklist", f"Title: {title}")
+            continue
+
+        # 5. 严格独立内容审查 (网站名)
+        if not contains_chinese(site_name):
+            print(f"  ✗ [5/8] 网站名称不含中文 (纯英文或乱码)，已过滤")
+            log_filtered_event(real_url, "5. Invalid Site Name (No Chinese)", f"Site Name: {site_name}")
+            continue
+        if contains_traditional_chinese(site_name):
+            print(f"  ✗ [5/8] 网站名称检测到繁体字，已过滤")
+            log_filtered_event(real_url, "5. Traditional Chinese in Site Name", f"Site Name: {site_name}")
+            continue
+
+        # 6. 严格独立内容审查 (标题)
+        if not contains_chinese(title):
+            print(f"  ✗ [6/8] 文章标题不含中文 (纯英文或乱码)，已过滤")
+            log_filtered_event(real_url, "6. Invalid Title (No Chinese)", f"Title: {title}")
+            continue
+        if contains_traditional_chinese(title):
+            print(f"  ✗ [6/8] 文章标题检测到繁体字，已过滤")
+            log_filtered_event(real_url, "6. Traditional Chinese in Title", f"Title: {title}")
+            continue
+
+        # 7. 无效页面检查 (404, 登录等)
+        is_invalid_title = False
+        if title:
+            lower_title = title.lower()
+            for keyword in INVALID_TITLE_KEYWORDS:
+                if keyword in lower_title:
+                    is_invalid_title = True
+                    break
+        if is_invalid_title:
+            print(f"  ✗ [7/8] 页面内容无效 (404/登录页等)，已过滤")
+            log_filtered_event(real_url, "7. Invalid Page Content", f"Title: {title}")
+            continue
+
+        # 8. 重复链接检查
+        if real_url in seen_urls:
+            print(f"  ✗ [8/8] 检测到重复链接，已过滤")
+            log_filtered_event(real_url, "8. Duplicate URL", f"URL: {real_url}")
+            continue
+
+        if real_url and title and site_name:
+            processed_sources.append({
+                'url': real_url,
+                'title': title,
+                'site_name': site_name
+            })
+            # 将新链接添加到已处理集合
+            seen_urls.add(real_url)
+            print(f"  ✓ 解析成功: {site_name} - {title}")
+        else:
+            print(f"  ✗ 解析失败或信息不全，跳过")
+
+    print(f"\n⭐ 已完成高质量筛选，共找到 {len(processed_sources)} 条有效引用")
+
+    top_sources = processed_sources[:5]
+    print(f"🔪 已选取最重要的 {len(top_sources)} 条引用")
+
+    if not top_sources:
+        print("⚠️  所有引用链接解析失败，无参考资料可添加")
+        return article_text
+
+    citations_section = "\n\n---\n\n## 参考资料\n\n"
+    for source in top_sources:
+        # 使用 \n\n 来强制换行，确保在 Word 中也能正确显示
+        citations_section += f"{source['site_name']}：{source['title']}\n\n原文链接：{source['url']}\n\n"
+
+    print(f"\n📝 引用格式化详情:")
+    print(f"   原文章长度: {len(article_text)} 字符")
+    print(f"   引用部分长度: {len(citations_section)} 字符")
+    print(f"   引用内容预览:")
+    print(citations_section[:200] + "..." if len(citations_section) > 200 else citations_section)
+
+    final_article = article_text + citations_section
+    print(f"   最终文章长度: {len(final_article)} 字符")
+
+    return final_article
 
 
 def generate_visual_blueprint(topic, article, api_key, base_url, model_name):
@@ -224,20 +445,32 @@ def summarize_paragraph_for_image(paragraph_text, topic, config):
 3. 使用具体的名词、生动的动词和具体细节
 4. 聚焦于视觉元素：物体、人物、地点、动作、氛围、色彩、光线
 
-❌ 严格禁止以下元素：
-- 不要描述任何包含文字的物品（书籍、海报、标语、杂志、报纸、标识牌、横幅、广告牌、屏幕文字、图表、数据可视化等）
-- 如果内容涉及文字信息或数据，请转换为视觉象征或隐喻场景
-- 专注于"可以拍照但看不到文字"的纯视觉场景
+❌ 严格禁止以下元素（这些会导致用户账号被封！）：
+【绝对不能出现的内容】
+- 任何军警相关：警察、军人、军队、士兵、警服、军装、制服、警徽、军徽、警车、军车、坦克、武器、枪械
+- 任何政治相关：国旗、党旗、国徽、党徽、领导人、政治人物、政府建筑、天安门、人民大会堂、政治标语
+- 任何敏感制服：城管、保安、执法、公务员、官员等穿制服的职业
+- 任何暴力内容：打斗、血腥、战争、冲突、抗议、游行
+- 任何文字图片：书籍、海报、标语、杂志、报纸、标识牌、横幅、广告牌、屏幕文字、图表、数据可视化
 
-✓ 推荐场景类型：
-- 自然景观、城市风光、建筑外观
-- 人物动作、表情、互动场景
-- 物品、设备的外观（但不要显示屏幕上的内容）
-- 氛围场景、光影效果
+【如果段落内容涉及以上敏感话题】
+- 完全忽略这些内容，不要描述
+- 转换为普通日常生活场景：办公室、咖啡馆、街道、公园等
+- 只描述普通民众的日常活动
+
+✓ 安全的场景类型：
+- 自然景观、城市风光、建筑外观（避免政府建筑）
+- 普通人的日常活动：购物、用餐、交谈、休闲
+- 办公室场景、咖啡馆、商场、公园
+- 抽象的氛围场景、光影效果
+- 静物、物品（避免武器等危险物品）
 
 示例对比：
-✓ 正确："现代办公室中，商务人士围坐讨论，落地窗外城市天际线"
-✗ 错误："商务人士查看数据报告和统计图表"（会生成带文字的图表）
+✓ 安全："现代办公室中，商务人士围坐讨论，落地窗外城市天际线"
+✓ 安全："咖啡馆里，年轻人使用笔记本电脑工作，温暖的灯光"
+✗ 危险："警察在街道巡逻"（会被封号！）
+✗ 危险："军人站岗"（会被封号！）
+✗ 危险："国旗飘扬"（会被封号！）
 
 5. 只输出中文视觉描述，不要引号、标点或额外说明文字
 
@@ -263,22 +496,41 @@ def summarize_paragraph_for_image(paragraph_text, topic, config):
             summary = result['candidates'][0]['content']['parts'][0]['text']
             summary = summary.strip().strip('"').strip("'")
 
-            # 为了进一步确保图片生成时不包含文字，在摘要后添加明确指示
-            # 这是双重保障：既在生成摘要时要求避免文字，又在最终提示词中再次强调
-            enhanced_summary = f"{summary}，纯视觉场景，无任何文字或符号"
+            # 安全过滤：检查并移除敏感词汇
+            sensitive_keywords = [
+                '警察', '军人', '军队', '士兵', '警服', '军装', '制服', '警徽', '军徽',
+                '警车', '军车', '坦克', '武器', '枪', '步枪', '手枪',
+                '国旗', '党旗', '国徽', '党徽', '领导', '主席', '总书记',
+                '天安门', '人民大会堂', '政府', '官员', '公务员',
+                '城管', '保安', '执法', '巡逻', '站岗',
+                '战争', '打斗', '冲突', '抗议', '游行', '示威'
+            ]
+
+            # 如果检测到敏感词，替换为安全的通用场景
+            contains_sensitive = False
+            for keyword in sensitive_keywords:
+                if keyword in summary:
+                    contains_sensitive = True
+                    print(f"⚠️ 警告：检测到敏感词'{keyword}'，将替换为安全场景")
+                    break
+
+            if contains_sensitive:
+                # 替换为安全的通用场景描述
+                summary = "现代都市街景，行人在商业街区漫步，现代建筑林立，温暖的阳光"
+                print(f"✓ 已替换为安全场景: {summary}")
+
+            # 为了进一步确保图片生成时不包含文字和敏感内容，在摘要后添加明确指示
+            enhanced_summary = f"{summary}，穿着便装的平民，日常休闲服饰，和平场景，纯视觉场景，无文字无符号无制服"
 
             print(f"段落摘要生成成功: {summary}")
-            print(f"增强后的提示词: {enhanced_summary}")
+            print(f"增强后的安全提示词: {enhanced_summary}")
             return enhanced_summary
         else:
             raise Exception('无法从API响应中提取摘要')
     except Exception as e:
-        print(f"段落摘要生成失败: {e}，使用降级方案")
-        # 降级：使用段落前50字符，并添加无文字指示
-        fallback = paragraph_text[:50].strip()
-        if fallback:
-            return f"illustration of {fallback}，纯视觉场景，无任何文字或符号"
-        return f"visual representation of {topic}，纯视觉场景，无任何文字或符号"
+        print(f"段落摘要生成失败: {e}，使用安全降级方案")
+        # 降级：使用安全的通用场景，避免任何可能的敏感内容
+        return f"现代都市生活场景，穿着便装的平民，日常休闲活动，和平场景，纯视觉场景，无文字无符号无制服"
 
 
 def test_gemini_model(model_name, api_key, base_url, temperature=1.0, top_p=0.95):

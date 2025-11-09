@@ -193,6 +193,21 @@ class ConfigPageApp {
         if (testGeminiImageBtn) {
             testGeminiImageBtn.addEventListener('click', () => this.handleTestGeminiImage());
         }
+
+        // 文章生成设置开关
+        const enableGoogleSearch = document.getElementById('enableGoogleSearch');
+        if (enableGoogleSearch) {
+            enableGoogleSearch.addEventListener('change', (e) => {
+                this.configManager.updateToggleStatus('enableGoogleSearch', e.target.checked);
+            });
+        }
+
+        const appendCitations = document.getElementById('appendCitations');
+        if (appendCitations) {
+            appendCitations.addEventListener('change', (e) => {
+                this.configManager.updateToggleStatus('appendCitations', e.target.checked);
+            });
+        }
     }
 
     /**

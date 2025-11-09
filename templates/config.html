@@ -160,6 +160,17 @@
                         </div>
 
                         <div class="config-item">
+                            <label class="config-item-label" for="maxRetryAttempts">
+                                <span class="icon">🔄</span>
+                                自动重试次数
+                            </label>
+                            <div class="config-item-input">
+                                <input type="number" id="maxRetryAttempts" value="10" min="1" max="20">
+                            </div>
+                            <p class="config-item-help">文章生成失败时自动重试的次数（默认：10次）</p>
+                        </div>
+
+                        <div class="config-item">
                             <label class="config-item-label" for="defaultPrompt">
                                 <span class="icon">📝</span>
                                 默认提示词模板
@@ -481,6 +492,42 @@
                         </div>
 
                         <div class="config-item">
+                            <label class="config-item-label checkbox-label">
+                                <input type="checkbox" id="geminiImageAutoDetect">
+                                <span class="icon">🔍</span>
+                                <span>智能主题检测</span>
+                            </label>
+                            <p class="config-item-help">
+                                ✨ 推荐开启！AI会自动分析文章内容，智能选择最合适的图片风格和人物种族<br>
+                                • 写特朗普新闻 → 自动生成欧美人物<br>
+                                • 写动漫主题 → 自动切换动漫风格<br>
+                                • 写中国话题 → 自动生成中国人<br>
+                                关闭后使用下方手动设置的参数
+                            </p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label" for="geminiImageEthnicity">
+                                <span class="icon">👥</span>
+                                人物种族偏好（手动设置）
+                            </label>
+                            <div class="config-item-input">
+                                <select id="geminiImageEthnicity">
+                                    <option value="auto">自动（模型默认）</option>
+                                    <option value="asian">亚洲人</option>
+                                    <option value="chinese">中国人</option>
+                                    <option value="japanese">日本人</option>
+                                    <option value="korean">韩国人</option>
+                                    <option value="caucasian">白种人</option>
+                                    <option value="african">非洲人</option>
+                                    <option value="latino">拉丁裔</option>
+                                    <option value="diverse">多元化</option>
+                                </select>
+                            </div>
+                            <p class="config-item-help">💡 智能检测关闭时生效。设置生成人物图片时的种族偏好</p>
+                        </div>
+
+                        <div class="config-item">
                             <label class="config-item-label" for="geminiImageAspectRatio">
                                 <span class="icon">📐</span>
                                 图片比例
@@ -582,6 +629,52 @@
                 <div class="info-box">
                     <span class="info-icon">💡</span>
                     <strong>高级用户可以在这里微调系统行为。</strong>
+                </div>
+
+                <!-- 文章生成设置 -->
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <span class="config-card-icon">📝</span>
+                        <div>
+                            <h3 class="config-card-title">文章生成设置</h3>
+                            <p class="config-card-description">配置文章生成的高级功能</p>
+                        </div>
+                    </div>
+                    <div class="config-card-body">
+                        <div class="config-item">
+                            <label class="config-item-label">
+                                <span class="icon">🔍</span>
+                                启用 Google 搜索
+                            </label>
+                            <div class="config-item-input">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableGoogleSearch" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span id="enableGoogleSearchStatus" class="toggle-status">已启用</span>
+                            </div>
+                            <p class="config-item-help">
+                                允许 Gemini 在生成文章时使用 Google 搜索获取最新信息
+                            </p>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="config-item-label">
+                                <span class="icon">📚</span>
+                                文章末尾显示引用链接
+                            </label>
+                            <div class="config-item-input">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="appendCitations">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span id="appendCitationsStatus" class="toggle-status">已禁用</span>
+                            </div>
+                            <p class="config-item-help">
+                                在文章末尾添加"参考资料"部分，列出 Google 搜索到的来源链接（需要启用 Google 搜索）
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 图片源优先级 -->

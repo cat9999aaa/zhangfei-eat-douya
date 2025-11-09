@@ -12,10 +12,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.config import ALLOWED_EXTENSIONS
 from app.config.loader import load_config, get_comfyui_settings, get_gemini_image_settings
 from app.utils.parsers import extract_article_title, derive_keyword_from_blueprint
-from app.services.gemini_service import generate_article_with_gemini, generate_visual_blueprint, build_visual_prompts, summarize_paragraph_for_image
+from app.services.gemini_service import generate_article_with_gemini, generate_visual_blueprint, build_visual_prompts, summarize_paragraph_for_image, format_article_with_citations
 from app.services.document_service import extract_paragraph_structures, compute_image_slots, create_word_document
 from app.services.comfyui_service import generate_image_with_comfyui
-from app.services.gemini_image_service import generate_image_with_gemini
+from app.services.gemini_image_service import generate_image_with_gemini, analyze_topic_for_image_generation
 from app.services.image_service import (
     fetch_unsplash_image_urls, fetch_pexels_image_urls, fetch_pixabay_image_urls,
     get_local_image_paths, _download_and_save_image
@@ -42,14 +42,14 @@ def shutdown_executor():
             executor = None
 
 class ImageProvider:
-    # ... (内容未改变，为简洁省略) ...
     """为单篇文章管理图片获取，确保图片唯一性"""
-    def __init__(self, keyword, config, topic, visual_prompts, blueprint):
+    def __init__(self, keyword, config, topic, visual_prompts, blueprint, topic_analysis=None):
         self.keyword = keyword
         self.config = config
         self.topic = topic
         self.visual_prompts = visual_prompts
         self.blueprint = blueprint
+        self.topic_analysis = topic_analysis  # 主题分析结果
         self.comfy_settings = get_comfyui_settings(config)
         self.gemini_image_settings = get_gemini_image_settings(config)
         self.priority = config.get('image_source_priority', ['gemini_image', 'comfyui', 'user_uploaded', 'pexels', 'unsplash', 'pixabay', 'local'])
@@ -133,17 +133,29 @@ class ImageProvider:
 
                     print(f"→ 尝试使用 Gemini 生成图片...")
                     prompt = custom_prompts.get('positive_prompt', self.topic or "beautiful image")
+
+                    # 如果有主题分析结果，使用智能推荐的参数
+                    if self.topic_analysis:
+                        style = self.topic_analysis.get('style', self.gemini_image_settings.get('style', 'realistic'))
+                        ethnicity = self.topic_analysis.get('ethnicity', self.gemini_image_settings.get('ethnicity', 'auto'))
+                        print(f"  🎯 使用智能分析参数: 风格={style}, 人物种族={ethnicity}")
+                    else:
+                        style = self.gemini_image_settings.get('style', 'realistic')
+                        ethnicity = self.gemini_image_settings.get('ethnicity', 'auto')
+
                     # 过滤掉 enabled 参数，只传递函数需要的参数
                     gemini_params = {
                         'api_key': self.gemini_image_settings.get('api_key'),
                         'base_url': self.gemini_image_settings.get('base_url', 'https://generativelanguage.googleapis.com'),
                         'model': self.gemini_image_settings.get('model', 'gemini-2.0-flash-exp'),
-                        'style': self.gemini_image_settings.get('style', 'realistic'),
+                        'style': style,
                         'aspect_ratio': self.gemini_image_settings.get('aspect_ratio', '16:9'),
                         'custom_style_prefix': self.gemini_image_settings.get('custom_prefix', ''),
                         'custom_style_suffix': self.gemini_image_settings.get('custom_suffix', ''),
+                        'ethnicity': ethnicity,
                         'max_retries': self.gemini_image_settings.get('max_retries', 3),
-                        'timeout': self.gemini_image_settings.get('timeout', 30)
+                        'timeout': self.gemini_image_settings.get('timeout', 30),
+                        'topic_analysis': self.topic_analysis  # 传递主题分析结果
                     }
                     image_path, metadata = generate_image_with_gemini(prompt=prompt, **gemini_params)
                     if image_path:
@@ -262,15 +274,23 @@ def execute_single_article_generation(topic, config, user_uploaded_images=None):
     top_p = config.get('top_p', 0.95)
     enable_image = config.get('enable_image', True)
     target_image_count = config.get('comfyui_image_count', 1)
+    enable_search = config.get('enable_google_search', True)  # 默认启用搜索
 
     print(f"📄 生成文章内容...")
-    print(f"   使用参数: Temperature={temperature}, Top-P={top_p}")
-    article = generate_article_with_gemini(topic, gemini_api_key, gemini_base_url, model_name, custom_prompt, temperature, top_p)
+    print(f"   使用参数: Temperature={temperature}, Top-P={top_p}, 启用搜索={enable_search}")
+    article, grounding_sources = generate_article_with_gemini(topic, gemini_api_key, gemini_base_url, model_name, custom_prompt, temperature, top_p, enable_search)
+
     article_title = extract_article_title(article)
     print(f"✓ 文章生成完成: 《{article_title}》")
 
-    paragraphs = extract_paragraph_structures(article)
-    image_slots = compute_image_slots(paragraphs, target_image_count)
+    # 提取段落结构和小标题位置
+    paragraphs, headings = extract_paragraph_structures(article)
+    print(f"📊 文章结构: {len(paragraphs)} 个段落, {len(headings)} 个小标题")
+
+    # 计算图片插入位置（基于小标题）
+    image_slots = compute_image_slots(paragraphs, target_image_count, headings)
+    print(f"🖼️  图片插入位置: {image_slots}")
+
     image_list, images_metadata = [], []
 
     if enable_image:
@@ -280,7 +300,13 @@ def execute_single_article_generation(topic, config, user_uploaded_images=None):
 
         for i, user_img in enumerate(user_uploaded_images or []):
             if i < len(image_slots):
-                image_list.append({'path': user_img.get('path'), 'summary': user_img.get('summary', '配图'), 'paragraph_index': image_slots[i], 'source': 'user_uploaded', 'order': i})
+                image_list.append({
+                    'path': user_img.get('path'),
+                    'summary': user_img.get('summary', '配图'),
+                    'insert_line': image_slots[i],  # 使用行号而不是段落索引
+                    'source': 'user_uploaded',
+                    'order': i
+                })
                 images_metadata.append({'source': 'user_uploaded', 'path': user_img.get('path'), 'order': i})
 
         if need_generate_count > 0:
@@ -291,23 +317,109 @@ def execute_single_article_generation(topic, config, user_uploaded_images=None):
             except Exception:
                 visual_blueprint, visual_prompts, image_keyword = None, None, ''
 
-            image_provider = ImageProvider(image_keyword, config, topic, visual_prompts, visual_blueprint)
+            # 智能主题分析（如果启用）
+            topic_analysis = None
+            gemini_image_settings = get_gemini_image_settings(config)
+            auto_detect_topic = gemini_image_settings.get('auto_detect_topic', True)  # 默认启用
+            if auto_detect_topic:
+                try:
+                    # 使用配置中的摘要模型
+                    analysis_model = config.get('comfyui_summary_model', 'gemini-2.0-flash-exp')
+
+                    print(f"\n🔍 智能主题分析...")
+                    print(f"   主题: {topic}")
+                    print(f"   使用模型: {analysis_model}")
+                    topic_analysis = analyze_topic_for_image_generation(
+                        topic,
+                        article,
+                        gemini_api_key,
+                        gemini_base_url,
+                        analysis_model
+                    )
+                    if topic_analysis:
+                        print(f"✓ 主题分析成功")
+                    else:
+                        print(f"⚠️  主题分析返回None，使用默认参数")
+                except Exception as e:
+                    print(f"⚠️  主题分析失败，使用默认参数")
+                    print(f"   错误详情: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    topic_analysis = None
+            else:
+                print(f"\n💡 智能主题检测已关闭，使用手动配置")
+
+            image_provider = ImageProvider(image_keyword, config, topic, visual_prompts, visual_blueprint, topic_analysis)
             for i in range(user_image_count, target_image_count):
                 print(f"\n  [{i+1}/{target_image_count}] 获取图片...")
                 slot_index = image_slots[i] if i < len(image_slots) else None
-                para_summary = f"visual representation of {topic}"
-                if slot_index is not None and slot_index < len(paragraphs):
-                    para_summary = summarize_paragraph_for_image(paragraphs[slot_index]['text'], topic, config)
 
-                custom_prompts = {'positive_prompt': para_summary, 'negative_prompt': visual_prompts.get('negative_prompt', 'lowres, blurry, watermark') if visual_prompts else 'lowres, blurry, watermark'}
+                # 第一张图使用全文主题，其余使用段落主题
+                is_first_image = (i == user_image_count)
+                if is_first_image:
+                    # 第一张图：使用全文主题
+                    para_summary = f"visual representation of {topic}"
+                    print(f"  📰 第一张图使用全文主题")
+                else:
+                    # 其余图片：使用段落主题
+                    para_summary = f"visual representation of {topic}"
+                    if slot_index is not None and slot_index < len(paragraphs):
+                        para_summary = summarize_paragraph_for_image(paragraphs[slot_index]['text'], topic, config)
+                        print(f"  📄 使用段落主题")
+
+                # 第一张图使用增强提示词，让它更惊艳
+                if is_first_image:
+                    # 第一张图增强：添加高质量、电影感、专业摄影等关键词
+                    enhanced_prompt = (
+                        f"stunning masterpiece, award-winning photography, cinematic lighting, "
+                        f"ultra detailed, 8k uhd, professional camera, dramatic composition, "
+                        f"{para_summary}, "
+                        f"high dynamic range, sharp focus, perfect exposure, magazine cover quality"
+                    )
+                    print(f"  🌟 使用增强质量提示词")
+                else:
+                    enhanced_prompt = para_summary
+
+                custom_prompts = {
+                    'positive_prompt': enhanced_prompt,
+                    'negative_prompt': visual_prompts.get('negative_prompt', 'lowres, blurry, watermark') if visual_prompts else 'lowres, blurry, watermark',
+                    'is_first_image': is_first_image  # 标记是否第一张图
+                }
                 image_path, image_source, image_metadata = image_provider.get_image(custom_prompts)
 
                 if image_path:
-                    image_list.append({'path': image_path, 'summary': para_summary, 'paragraph_index': slot_index, 'source': image_source, 'order': i})
-                    images_metadata.append({'source': image_source, 'path': image_path, 'summary': para_summary, 'paragraph_index': slot_index, 'order': i, 'metadata': image_metadata})
-                    print(f"  ✓ 图片 {i+1} 获取成功")
+                    # 获取对应的插入行号
+                    insert_line = image_slots[i] if i < len(image_slots) else None
+                    image_list.append({
+                        'path': image_path,
+                        'summary': para_summary,
+                        'insert_line': insert_line,  # 使用行号而不是段落索引
+                        'source': image_source,
+                        'order': i
+                    })
+                    images_metadata.append({
+                        'source': image_source,
+                        'path': image_path,
+                        'summary': para_summary,
+                        'insert_line': insert_line,
+                        'order': i,
+                        'metadata': image_metadata
+                    })
+                    print(f"  ✓ 图片 {i+1} 获取成功（插入位置: 第{insert_line}行后）")
 
         print(f"\n✓ 图片准备完成，共 {len(image_list)} 张")
+
+    # 如果启用引用链接功能，在所有图片处理完成后、生成文档前，添加参考资料
+    append_citations = config.get('append_citations', False)
+    if append_citations and grounding_sources:
+        print(f"\n📚 添加引用链接到文章末尾...")
+        print(f"   引用来源数量: {len(grounding_sources)}")
+        article = format_article_with_citations(article, grounding_sources)
+        print(f"✓ 引用链接已添加")
+    elif append_citations and not grounding_sources:
+        print(f"\n⚠️  已启用引用功能，但本次生成没有搜索来源")
+    else:
+        print(f"\n💡 引用功能未启用 (append_citations={append_citations})")
 
     print(f"\n📦 生成 Word 文档...")
     filename = create_word_document(article_title, article, image_list, enable_image, pandoc_path, config)
@@ -323,6 +435,8 @@ def execute_generation_task(task_id, topics, config):
     with task_lock:
         task = generation_tasks.get(task_id, {})
         topic_images = task.get('topic_images', {})
+
+    max_retry_attempts = config.get('max_retry_attempts', 10)
 
     with ThreadPoolExecutor(max_workers=config.get('max_concurrent_tasks', 3)) as single_task_executor:
         futures = {single_task_executor.submit(execute_single_article_generation, topic, config, topic_images.get(topic)): topic for topic in topics}
@@ -348,20 +462,68 @@ def execute_generation_task(task_id, topics, config):
                     task = generation_tasks[task_id]
                     retry_count = task.get('retry_counts', {}).get(topic, 0)
 
-                    # ✅ 防止重复错误记录
-                    existing_error_topics = {err['topic'] for err in task['errors']}
-                    if topic in existing_error_topics:
-                        # 更新现有错误记录
-                        for err in task['errors']:
-                            if err['topic'] == topic:
-                                err['error'] = str(e)
-                                err['retry_count'] = retry_count
-                                break
-                        print(f"✗ 主题 '{topic}' 再次失败，已更新错误记录")
+                    # 检查是否需要自动重试
+                    if retry_count < max_retry_attempts:
+                        # 增加重试计数
+                        task['retry_counts'][topic] = retry_count + 1
+                        print(f"\n🔄 主题 '{topic}' 生成失败（第 {retry_count + 1}/{max_retry_attempts} 次尝试），正在自动重试...")
+                        print(f"   错误信息: {str(e)}\n")
+
+                        # 同步重试（不使用多线程，避免重复发布）
+                        retry_success = False
+                        for attempt in range(retry_count + 1, max_retry_attempts + 1):
+                            try:
+                                with task_lock:
+                                    task['retry_counts'][topic] = attempt
+
+                                print(f"🔄 第 {attempt}/{max_retry_attempts} 次尝试生成 '{topic}'...")
+                                result = execute_single_article_generation(topic, config, topic_images.get(topic))
+
+                                # 重试成功
+                                with task_lock:
+                                    task = generation_tasks[task_id]
+                                    existing_topics = {r['topic'] for r in task['results']}
+                                    if topic not in existing_topics:
+                                        task['results'].append(result)
+                                        print(f"✓ 主题 '{topic}' 在第 {attempt} 次尝试后生成成功！")
+                                        retry_success = True
+                                        break
+                                    else:
+                                        print(f"⚠️  警告: 主题 '{topic}' 已经成功生成过，跳过重复结果")
+                                        retry_success = True
+                                        break
+                            except Exception as retry_error:
+                                print(f"✗ 第 {attempt}/{max_retry_attempts} 次尝试失败: {str(retry_error)}")
+                                if attempt < max_retry_attempts:
+                                    print(f"   继续重试...\n")
+                                else:
+                                    print(f"   已达到最大重试次数，标记为失败\n")
+                                    # 达到最大重试次数，记录错误
+                                    with task_lock:
+                                        task = generation_tasks[task_id]
+                                        existing_error_topics = {err['topic'] for err in task['errors']}
+                                        if topic not in existing_error_topics:
+                                            task['errors'].append({
+                                                'topic': topic,
+                                                'error': f"尝试 {max_retry_attempts} 次后仍然失败。最后错误: {str(retry_error)}",
+                                                'retry_count': max_retry_attempts
+                                            })
+                                            print(f"✗ 主题 '{topic}' 已尝试 {max_retry_attempts} 次，最终失败")
                     else:
-                        # 添加新错误记录
-                        task['errors'].append({'topic': topic, 'error': str(e), 'retry_count': retry_count})
-                        print(f"✗ 主题 '{topic}' 生成失败并记录")
+                        # 已达到最大重试次数
+                        existing_error_topics = {err['topic'] for err in task['errors']}
+                        if topic in existing_error_topics:
+                            # 更新现有错误记录
+                            for err in task['errors']:
+                                if err['topic'] == topic:
+                                    err['error'] = str(e)
+                                    err['retry_count'] = retry_count
+                                    break
+                            print(f"✗ 主题 '{topic}' 再次失败，已更新错误记录")
+                        else:
+                            # 添加新错误记录
+                            task['errors'].append({'topic': topic, 'error': str(e), 'retry_count': retry_count})
+                            print(f"✗ 主题 '{topic}' 生成失败并记录")
 
             finally:
                 with task_lock:

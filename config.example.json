@@ -6,7 +6,12 @@
   "pixabay_api_key": "YOUR_PIXABAY_API_KEY",
   "default_model": "gemini-pro",
   "default_prompt": "",
+  "temperature": 1.0,
+  "top_p": 0.95,
+  "enable_google_search": true,
+  "append_citations": false,
   "max_concurrent_tasks": 3,
+  "max_retry_attempts": 10,
   "pandoc_path": "",
   "output_directory": "output",
   "image_source_priority": [
@@ -66,6 +71,8 @@
     "aspect_ratio": "16:9",
     "custom_prefix": "",
     "custom_suffix": "",
+    "ethnicity": "auto",
+    "auto_detect_topic": true,
     "max_retries": 3,
     "timeout": 30
   }

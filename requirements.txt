@@ -5,6 +5,8 @@ google-generativeai>=0.3.0
 python-docx>=1.1.0
 requests>=2.31.0
 pillow>=10.0.0
+beautifulsoup4>=4.12.2
+opencc-python-reimplemented>=0.1.6
 
 # 可选依赖（推荐安装）
 # waitress - 生产级 WSGI 服务器，避免 Windows 上的 socket 错误

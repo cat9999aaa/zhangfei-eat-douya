@@ -1,0 +1,9 @@
+[2025-11-09 09:49:50] Blocked URL: https://www.hk01.com/%E5%A4%A7%E5%9C%8B%E5%B0%8F%E4%BA%8B/60291738/%E9%80%9A%E8%83%8C%E6%8B%B3%E5%A4%A7%E5%B8%AB%E5%85%9C%E5%B7%B4%E6%98%9F%E5%A4%A7%E8%B3%BD%E8%A2%AB%E6%89%93%E5%80%92-%E7%A9%B6%E7%AB%9F%E6%80%8E%E9%BA%BC%E8%BC%B8%E7%9A%84-%E6%8F%AD%E6%9B%BE%E6%9C%89%E9%81%B8%E6%89%8B%E5%91%BD%E5%96%AA%E8%B3%BD%E5%A0%B4 | Reason: 1. GFWList Blacklist | Detail: Matched: hk01.com
+[2025-11-09 09:49:55] Blocked URL: https://www.kuai.media/news/2025/11/05/756533.html | Reason: 2. TLD Whitelist | Detail: URL: https://www.kuai.media/news/2025/11/05/756533.html
+[2025-11-09 09:49:59] Blocked URL: https://www.wenxuecity.com/news/2025/11/06/126400489.html | Reason: 1. GFWList Blacklist | Detail: Matched: wenxuecity.com
+[2025-11-09 09:50:03] Blocked URL: https://www.wenxuecity.com/news/2025/11/04/126397550.html | Reason: 1. GFWList Blacklist | Detail: Matched: wenxuecity.com
+[2025-11-09 09:50:06] Blocked URL: https://user.guancha.cn/main/content?id=1542165 | Reason: 3. Non-Static URL | Detail: URL: https://user.guancha.cn/main/content?id=1542165
+[2025-11-09 09:50:09] Blocked URL: https://news.ifeng.com/c/8o52po2QISf | Reason: 3. Non-Static URL | Detail: URL: https://news.ifeng.com/c/8o52po2QISf
+[2025-11-09 09:50:16] Blocked URL: https://www.wenxuecity.com/news/2025/11/07/126401373.html | Reason: 1. GFWList Blacklist | Detail: Matched: wenxuecity.com
+[2025-11-09 09:50:36] Blocked URL: https://china.cnr.cn/gdgg/20251103/t20251103_527417116.shtml | Reason: 3. Non-Static URL | Detail: URL: https://china.cnr.cn/gdgg/20251103/t20251103_527417116.shtml
+[2025-11-09 09:50:45] Blocked URL: https://changing-transport.org/wp-content/uploads/2025_New-modes-of-urban-public-transport-in-China_CN.pdf | Reason: 3. Non-Static URL | Detail: URL: https://changing-transport.org/wp-content/uploads/2025_New-modes-of-urban-public-transport-in-China_CN.pdf

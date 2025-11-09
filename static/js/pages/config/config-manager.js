@@ -88,6 +88,9 @@ class ConfigManager {
         if (config.max_concurrent_tasks) {
             elements.maxConcurrentTasks.value = config.max_concurrent_tasks;
         }
+        if (config.max_retry_attempts !== undefined) {
+            elements.maxRetryAttempts.value = config.max_retry_attempts;
+        }
 
         // Temperature 和 Top-P
         if (config.temperature !== undefined) {
@@ -95,6 +98,16 @@ class ConfigManager {
         }
         if (config.top_p !== undefined) {
             elements.topP.value = config.top_p;
+        }
+
+        // Google 搜索和引用设置
+        if (config.enable_google_search !== undefined) {
+            elements.enableGoogleSearch.checked = config.enable_google_search;
+            this.updateToggleStatus('enableGoogleSearch', config.enable_google_search);
+        }
+        if (config.append_citations !== undefined) {
+            elements.appendCitations.checked = config.append_citations;
+            this.updateToggleStatus('appendCitations', config.append_citations);
         }
 
         // ComfyUI 配置
@@ -197,6 +210,8 @@ class ConfigManager {
         // elements.geminiImageModel.value = merged.model || 'imagen-3.0-generate-001';
 
         elements.geminiImageStyle.value = merged.style || 'realistic';
+        elements.geminiImageAutoDetect.checked = merged.auto_detect_topic !== false; // 默认开启
+        elements.geminiImageEthnicity.value = merged.ethnicity || 'auto';
         elements.geminiImageAspectRatio.value = merged.aspect_ratio || '16:9';
         elements.geminiImageCustomPrefix.value = merged.custom_prefix || '';
         elements.geminiImageCustomSuffix.value = merged.custom_suffix || '';
@@ -215,6 +230,8 @@ class ConfigManager {
             base_url: elements.geminiImageBaseUrl.value.trim() || '',
             model: elements.geminiImageModel.value || 'imagen-3.0-generate-001',
             style: elements.geminiImageStyle.value || 'realistic',
+            auto_detect_topic: elements.geminiImageAutoDetect.checked,
+            ethnicity: elements.geminiImageEthnicity.value || 'auto',
             aspect_ratio: elements.geminiImageAspectRatio.value || '16:9',
             custom_prefix: elements.geminiImageCustomPrefix.value.trim() || '',
             custom_suffix: elements.geminiImageCustomSuffix.value.trim() || '',
@@ -265,6 +282,16 @@ class ConfigManager {
     }
 
     /**
+     * 更新开关状态文本
+     */
+    updateToggleStatus(fieldId, isEnabled) {
+        const statusElement = document.getElementById(`${fieldId}Status`);
+        if (statusElement) {
+            statusElement.textContent = isEnabled ? '已启用' : '已禁用';
+        }
+    }
+
+    /**
      * 保存配置
      */
     async saveConfig(imageDirs = [], imagePriority = []) {
@@ -278,7 +305,10 @@ class ConfigManager {
             default_prompt: elements.defaultPrompt.value,
             temperature: parseFloat(elements.temperature.value) || 1.0,
             top_p: parseFloat(elements.topP.value) || 0.95,
+            enable_google_search: elements.enableGoogleSearch.checked,
+            append_citations: elements.appendCitations.checked,
             max_concurrent_tasks: parseInt(elements.maxConcurrentTasks.value) || 3,
+            max_retry_attempts: parseInt(elements.maxRetryAttempts.value) || 10,
             comfyui_settings: this.collectComfyuiSettings(),
             comfyui_image_count: parseInt(elements.comfyuiImageCount.value) || 1,
             comfyui_style_template: elements.comfyuiStyleTemplate.value || 'custom',
@@ -342,7 +372,12 @@ class ConfigManager {
         elements.defaultPrompt.value = '';
         elements.temperature.value = 1.0;
         elements.topP.value = 0.95;
+        elements.enableGoogleSearch.checked = true;
+        this.updateToggleStatus('enableGoogleSearch', true);
+        elements.appendCitations.checked = false;
+        this.updateToggleStatus('appendCitations', false);
         elements.maxConcurrentTasks.value = 3;
+        elements.maxRetryAttempts.value = 10;
 
         this.applyComfyuiSettings(this.comfyuiDefaults);
 
@@ -467,6 +502,9 @@ class ConfigManager {
             temperature: document.getElementById('temperature'),
             topP: document.getElementById('topP'),
             maxConcurrentTasks: document.getElementById('maxConcurrentTasks'),
+            maxRetryAttempts: document.getElementById('maxRetryAttempts'),
+            enableGoogleSearch: document.getElementById('enableGoogleSearch'),
+            appendCitations: document.getElementById('appendCitations'),
             comfyuiEnabled: document.getElementById('comfyuiEnabled'),
             comfyuiServerUrl: document.getElementById('comfyuiServerUrl'),
             comfyuiWorkflowPath: document.getElementById('comfyuiWorkflowPath'),
@@ -480,6 +518,8 @@ class ConfigManager {
             geminiImageBaseUrl: document.getElementById('geminiImageBaseUrl'),
             geminiImageModel: document.getElementById('geminiImageModel'),
             geminiImageStyle: document.getElementById('geminiImageStyle'),
+            geminiImageAutoDetect: document.getElementById('geminiImageAutoDetect'),
+            geminiImageEthnicity: document.getElementById('geminiImageEthnicity'),
             geminiImageAspectRatio: document.getElementById('geminiImageAspectRatio'),
             geminiImageCustomPrefix: document.getElementById('geminiImageCustomPrefix'),
             geminiImageCustomSuffix: document.getElementById('geminiImageCustomSuffix'),
